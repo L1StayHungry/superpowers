@@ -1,5 +1,5 @@
 {
-  "name": "superpowers",
+  "name": "t-superpowers",
   "version": "5.1.0",
   "description": "An agentic skills framework & software development methodology that works: planning, TDD, debugging, and collaboration workflows.",
   "author": {
@@ -22,7 +22,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Superpowers",
+    "displayName": "T-Superpowers",
     "shortDescription": "Planning, TDD, debugging, and delivery workflows for coding agents",
     "longDescription": "Use Superpowers to guide agent work through brainstorming, implementation planning, test-driven development, systematic debugging, parallel execution, code review, and finish-the-branch workflows.",
     "developerName": "Jesse Vincent",
@@ -43,5 +43,6 @@
     "composerIcon": "./assets/superpowers-small.svg",
     "logo": "./assets/app-icon.png",
     "screenshots": []
-  }
+  },
+  "hooks": []
 }
