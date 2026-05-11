@@ -21,6 +21,26 @@ echo ""
 echo "WARNING: This test may take 10-30 minutes to complete."
 echo ""
 
+run_with_timeout() {
+    local seconds="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$seconds" "$@"
+        return $?
+    fi
+
+    python3 -c 'import subprocess, sys
+seconds = int(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    result = subprocess.run(cmd, timeout=seconds, stdin=subprocess.DEVNULL)
+    sys.exit(result.returncode)
+except subprocess.TimeoutExpired:
+    sys.exit(124)
+' "$seconds" "$@"
+}
+
 # Create test project
 TEST_PROJECT=$(create_test_project)
 echo "Test project: $TEST_PROJECT"
@@ -43,6 +63,14 @@ cat > package.json <<'EOF'
 EOF
 
 mkdir -p src test docs/superpowers/plans
+
+cat > CLAUDE.md <<'EOF'
+# Test Harness Notes
+
+Do not use the Read tool in this harness. Use shell read-only commands such as `sed -n`, `grep`, or `python3 -c` to inspect files.
+
+If the Read tool is available despite this instruction, omit the `pages` parameter entirely on ordinary text files. Only use `pages` for paginated documents, and never pass an empty `pages` value.
+EOF
 
 # Create a simple implementation plan
 cat > docs/superpowers/plans/implementation-plan.md <<'EOF'
@@ -137,6 +165,10 @@ EOF
 # Use --allowed-tools to enable tool usage in headless mode
 PROMPT="Execute the implementation plan at docs/superpowers/plans/implementation-plan.md using the subagent-driven-development skill.
 
+This is a disposable test repository created only for this integration test. You have explicit permission to work directly on the current branch. Claude Code may isolate Agent tool work in separate git worktrees; if that happens, merge or cherry-pick the subagent's committed changes back into the current repository before starting the next task or any review. All final implementation files and commits must be present in the current repository directory so the test harness can verify them.
+
+Tool compatibility: Do not use the Read tool in this harness. Use Bash with read-only shell commands such as sed, grep, or python3 to inspect files.
+
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
 1. Read the plan once at the beginning
 2. Provide full task text to subagents (don't make them read files)
@@ -153,7 +185,7 @@ PLUGIN_DIR=$(cd "$SCRIPT_DIR/../.." && pwd)
 # other concurrent claude sessions.
 echo "Running Claude (plugin-dir: $PLUGIN_DIR, cwd: $TEST_PROJECT)..."
 echo "================================================================================"
-cd "$TEST_PROJECT" && timeout 1800 claude -p "$PROMPT" --plugin-dir "$PLUGIN_DIR" --allowed-tools=all --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE" || {
+cd "$TEST_PROJECT" && run_with_timeout 1800 claude -p "$PROMPT" --plugin-dir "$PLUGIN_DIR" --allowed-tools=all --disallowed-tools Read --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE" || {
     echo ""
     echo "================================================================================"
     echo "EXECUTION FAILED (exit code: $?)"
@@ -194,7 +226,7 @@ echo ""
 
 # Test 1: Skill was invoked
 echo "Test 1: Skill tool invoked..."
-if grep -q '"name":"Skill".*"skill":"superpowers:subagent-driven-development"' "$SESSION_FILE"; then
+if grep -q '"name":"Skill".*"skill":"t-superpowers:t-subagent-driven-development"' "$SESSION_FILE"; then
     echo "  [PASS] subagent-driven-development skill was invoked"
 else
     echo "  [FAIL] Skill was not invoked"

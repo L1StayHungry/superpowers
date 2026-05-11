@@ -26,6 +26,7 @@ fi
 VERBOSE=false
 SPECIFIC_TEST=""
 TIMEOUT=300  # Default 5 minute timeout per test
+TIMEOUT_EXPLICIT=false
 RUN_INTEGRATION=false
 
 while [[ $# -gt 0 ]]; do
@@ -40,6 +41,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --timeout)
             TIMEOUT="$2"
+            TIMEOUT_EXPLICIT=true
             shift 2
             ;;
         --integration|-i)
@@ -70,6 +72,30 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [ "$RUN_INTEGRATION" = true ] && [ "$TIMEOUT_EXPLICIT" = false ]; then
+    TIMEOUT=1800
+fi
+
+run_with_timeout() {
+    local seconds="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$seconds" "$@"
+        return $?
+    fi
+
+    python3 -c 'import subprocess, sys
+seconds = int(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    result = subprocess.run(cmd, timeout=seconds, stdin=subprocess.DEVNULL)
+    sys.exit(result.returncode)
+except subprocess.TimeoutExpired:
+    sys.exit(124)
+' "$seconds" "$@"
+}
 
 # List of skill tests to run (fast unit tests)
 tests=(
@@ -119,7 +145,7 @@ for test in "${tests[@]}"; do
     start_time=$(date +%s)
 
     if [ "$VERBOSE" = true ]; then
-        if timeout "$TIMEOUT" bash "$test_path"; then
+        if run_with_timeout "$TIMEOUT" bash "$test_path"; then
             end_time=$(date +%s)
             duration=$((end_time - start_time))
             echo ""
@@ -139,7 +165,7 @@ for test in "${tests[@]}"; do
         fi
     else
         # Capture output for non-verbose mode
-        if output=$(timeout "$TIMEOUT" bash "$test_path" 2>&1); then
+        if output=$(run_with_timeout "$TIMEOUT" bash "$test_path" 2>&1); then
             end_time=$(date +%s)
             duration=$((end_time - start_time))
             echo "  [PASS] (${duration}s)"

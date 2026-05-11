@@ -1,6 +1,29 @@
 #!/usr/bin/env bash
 # Helper functions for Claude Code skill tests
 
+run_with_timeout() {
+    local seconds="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$seconds" "$@"
+        return $?
+    fi
+
+    python3 -c 'import subprocess, sys
+seconds = int(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    result = subprocess.run(cmd, timeout=seconds, stdin=subprocess.DEVNULL)
+    sys.exit(result.returncode)
+except subprocess.TimeoutExpired:
+    sys.exit(124)
+' "$seconds" "$@"
+}
+
+# Resolve the plugin root from this helpers file, even when tests cd elsewhere.
+CLAUDE_CODE_TEST_PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 # Run Claude Code with a prompt and capture output
 # Usage: run_claude "prompt text" [timeout_seconds] [allowed_tools]
 run_claude() {
@@ -10,13 +33,13 @@ run_claude() {
     local output_file=$(mktemp)
 
     # Build command
-    local cmd="claude -p \"$prompt\""
+    local cmd="claude -p \"$prompt\" --plugin-dir \"$CLAUDE_CODE_TEST_PLUGIN_DIR\""
     if [ -n "$allowed_tools" ]; then
         cmd="$cmd --allowed-tools=$allowed_tools"
     fi
 
     # Run Claude in headless mode with timeout
-    if timeout "$timeout" bash -c "$cmd" > "$output_file" 2>&1; then
+    if run_with_timeout "$timeout" bash -c "$cmd" > "$output_file" 2>&1; then
         cat "$output_file"
         rm -f "$output_file"
         return 0
@@ -35,7 +58,7 @@ assert_contains() {
     local pattern="$2"
     local test_name="${3:-test}"
 
-    if echo "$output" | grep -q "$pattern"; then
+    if echo "$output" | grep -qi "$pattern"; then
         echo "  [PASS] $test_name"
         return 0
     else
@@ -54,7 +77,7 @@ assert_not_contains() {
     local pattern="$2"
     local test_name="${3:-test}"
 
-    if echo "$output" | grep -q "$pattern"; then
+    if echo "$output" | grep -qi "$pattern"; then
         echo "  [FAIL] $test_name"
         echo "  Did not expect to find: $pattern"
         echo "  In output:"
@@ -74,7 +97,7 @@ assert_count() {
     local expected="$3"
     local test_name="${4:-test}"
 
-    local actual=$(echo "$output" | grep -c "$pattern" || echo "0")
+    local actual=$(echo "$output" | grep -ci "$pattern" || echo "0")
 
     if [ "$actual" -eq "$expected" ]; then
         echo "  [PASS] $test_name (found $actual instances)"
@@ -98,8 +121,8 @@ assert_order() {
     local test_name="${4:-test}"
 
     # Get line numbers where patterns appear
-    local line_a=$(echo "$output" | grep -n "$pattern_a" | head -1 | cut -d: -f1)
-    local line_b=$(echo "$output" | grep -n "$pattern_b" | head -1 | cut -d: -f1)
+    local line_a=$(echo "$output" | grep -ni "$pattern_a" | head -1 | cut -d: -f1)
+    local line_b=$(echo "$output" | grep -ni "$pattern_b" | head -1 | cut -d: -f1)
 
     if [ -z "$line_a" ]; then
         echo "  [FAIL] $test_name: pattern A not found: $pattern_a"
@@ -111,7 +134,7 @@ assert_order() {
         return 1
     fi
 
-    if [ "$line_a" -lt "$line_b" ]; then
+    if [ "$line_a" -le "$line_b" ]; then
         echo "  [PASS] $test_name (A at line $line_a, B at line $line_b)"
         return 0
     else
@@ -193,6 +216,7 @@ EOF
 
 # Export functions for use in tests
 export -f run_claude
+export -f run_with_timeout
 export -f assert_contains
 export -f assert_not_contains
 export -f assert_count

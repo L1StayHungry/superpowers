@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
-# Scaffold the Go Fractals test project
-# Usage: ./scaffold.sh /path/to/target/directory
+# Scaffold the t-smoke subagent-driven-development test project
+# Usage: ./scaffold.sh TARGET_DIRECTORY
 
 set -e
 
-TARGET_DIR="${1:?Usage: $0 <target-directory>}"
+TARGET_DIR="${1:?Usage: $0 TARGET_DIRECTORY}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Create target directory
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 
-# Initialize git repo
 git init
 
-# Copy design and plan
 cp "$SCRIPT_DIR/design.md" .
 cp "$SCRIPT_DIR/plan.md" .
 
@@ -25,10 +22,11 @@ Do not use the Read tool in this harness. Use shell read-only commands such as `
 
 If the Read tool is available despite this instruction, omit the `pages` parameter entirely on ordinary text files. Only use `pages` for paginated documents, and never pass an empty `pages` value.
 
-This is a disposable test repository. Work may happen in Claude Code worktrees, but completed task work must be committed and merged or cherry-picked back into this repository before reporting DONE.
+This is a disposable smoke-test repository. Work may happen in Claude Code worktrees, but completed task work must be committed and merged or cherry-picked back into this repository before reporting DONE.
+
+Keep the implementation small. The goal is to verify `t-superpowers:t-subagent-driven-development` harness behavior, not to build a product.
 EOF
 
-# Create .claude settings to allow reads/writes in this directory
 mkdir -p .claude
 cat > .claude/settings.local.json << 'SETTINGS'
 {
@@ -36,19 +34,20 @@ cat > .claude/settings.local.json << 'SETTINGS'
     "allow": [
       "Edit(**)",
       "Write(**)",
-      "Bash(go:*)",
+      "Bash(npm:*)",
+      "Bash(node:*)",
       "Bash(mkdir:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(test:*)"
     ]
   }
 }
 SETTINGS
 
-# Create initial commit
 git add .
-git commit -m "Initial project setup with design and plan"
+git commit -m "Initial t-smoke project setup"
 
-echo "Scaffolded Go Fractals project at: $TARGET_DIR"
+echo "Scaffolded t-smoke project at: $TARGET_DIR"
 echo ""
 echo "To run the test:"
 echo "  claude -p \"Execute this plan using t-superpowers:t-subagent-driven-development. Plan: $TARGET_DIR/plan.md\" --plugin-dir /path/to/superpowers"
