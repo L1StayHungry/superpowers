@@ -1,0 +1,1 @@
+The workspace is empty, so first design question: do you want a minimal single-page React todo list with add, toggle complete, and delete, or do you want extras like filters and localStorage persistence?

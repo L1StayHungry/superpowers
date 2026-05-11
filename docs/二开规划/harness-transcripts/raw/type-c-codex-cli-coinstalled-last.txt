@@ -1,0 +1,1 @@
+To keep this aligned with the repo and avoid building the wrong thing, I need one clarification first: should this be a minimal single-page todo list with add, toggle complete, and delete, or do you want anything extra like persistence, filters, or styling?

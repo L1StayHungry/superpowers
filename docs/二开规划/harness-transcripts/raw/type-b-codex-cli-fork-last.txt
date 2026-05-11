@@ -1,0 +1,7 @@
+Some expected project signals aren’t exist here yet: `/tmp/harness-codex-fork.pcEhza` is not a git repo, and I didn’t find an obvious React app scaffold at the top level.
+
+Do you want:
+1. a brand new React app created in this folder, or
+2. the todo list added to an existing app in another path?
+
+If it’s an existing app, send the path.
