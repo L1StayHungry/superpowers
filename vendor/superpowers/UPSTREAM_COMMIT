@@ -1,0 +1,5 @@
+upstream: https://github.com/obra/superpowers
+branch: main
+commit: f2cbfbefebbfef77321e4c9abc9e949826bea9d7
+synced_at: 2026-05-09T02:29:35Z
+notes: initial vendoring for t-superpowers fork
