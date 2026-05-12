@@ -704,3 +704,7 @@ Date: 2026-05-12T13:18:20Z
 - Static validation: `PYTHONPYCACHEPREFIX=/tmp/t-archive-precheck-pycache-main2 python3 -m py_compile tools/t-archive-precheck` passed.
 - Static validation: mutation grep for git/file destructive operations returned no output, exit code `1`.
 - Real repository smoke: postponed until after this implementation commit because `tools/t-archive-precheck` and documentation changes make the main worktree intentionally dirty before commit.
+
+Date: 2026-05-12T13:20:00Z
+
+- Post-commit real repository smoke: `tools/t-archive-precheck 20260512-trigger-convergence` exited `0`, stderr was empty, and stdout was `{"change_id": "20260512-trigger-convergence", "archive_patches": [{"capability": "triggering", "target": "docsDev/specs/triggering/spec.md", "action": "create"}]}`.
