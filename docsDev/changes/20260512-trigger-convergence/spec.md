@@ -1,7 +1,7 @@
 ---
 change_id: 20260512-trigger-convergence
 created_at: 2026-05-12T01:35:57Z
-updated_at: 2026-05-12T02:03:24Z
+updated_at: 2026-05-12T03:12:38Z
 owner: lihuajun
 ---
 
@@ -11,6 +11,7 @@ owner: lihuajun
 
 - 2026-05-12: Initial design for stage 2 trigger convergence.
 - 2026-05-12: Added positive Codex implicit-trigger validation, tighter ambiguous-request handling, richer Archive Patch scenarios, and rebase risk coverage.
+- 2026-05-12: Moved trigger-convergence transcript evidence under the change directory for archive continuity.
 
 ## Overview
 
@@ -70,7 +71,7 @@ Expected implementation files:
 - Modify `skills/t-systematic-debugging/SKILL.md`: frontmatter `description`.
 - Modify `skills/t-subagent-driven-development/SKILL.md`: frontmatter `description`.
 
-Expected validation artifacts may be added under `docs/二开规划/harness-transcripts/` or a focused test fixture if the implementation plan chooses to automate part of the trigger checks.
+Expected validation artifacts for this change live under `docsDev/changes/20260512-trigger-convergence/transcripts/`, with raw runtime logs in `docsDev/changes/20260512-trigger-convergence/transcripts/raw/`.
 
 ## Behavior Rules
 

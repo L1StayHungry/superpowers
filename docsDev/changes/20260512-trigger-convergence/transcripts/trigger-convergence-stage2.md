@@ -13,7 +13,7 @@ This harness record validates the first stage-2 trigger convergence change:
 - Complex Codex PDF export prompt, without mentioning `t-superpowers`, implicitly selected `t-brainstorming`.
 - Explicit `t-superpowers` PDF export prompt entered the complex-work skill path.
 
-Raw logs are kept under `docs/二开规划/harness-transcripts/raw/`.
+Raw logs are kept under `docsDev/changes/20260512-trigger-convergence/transcripts/raw/`.
 
 ## Checks
 
@@ -35,8 +35,8 @@ Result: PASS
 
 Evidence:
 
-- Raw stream: `docs/二开规划/harness-transcripts/raw/trigger-convergence-claude-simple.jsonl`
-- Stderr: `docs/二开规划/harness-transcripts/raw/trigger-convergence-claude-simple.stderr.log`
+- Raw stream: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-claude-simple.jsonl`
+- Stderr: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-claude-simple.stderr.log`
 - The run attempted to load `t-superpowers:t-using-superpowers`, then proceeded directly to locate the requested copy.
 - No `t-superpowers:t-brainstorming` invocation occurred.
 - No new `docsDev/changes/<change-id>/` directory was created for this prompt.
@@ -61,8 +61,8 @@ Result: PASS
 
 Evidence:
 
-- Raw stream: `docs/二开规划/harness-transcripts/raw/trigger-convergence-codex-readme.jsonl`
-- Stderr: `docs/二开规划/harness-transcripts/raw/trigger-convergence-codex-readme.stderr.log`
+- Raw stream: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-codex-readme.jsonl`
+- Stderr: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-codex-readme.stderr.log`
 - Codex injected `t-superpowers:t-using-superpowers`.
 - Codex did not inject `t-superpowers:t-brainstorming`.
 
@@ -84,8 +84,8 @@ Result: PASS
 
 Evidence:
 
-- Raw stream: `docs/二开规划/harness-transcripts/raw/trigger-convergence-codex-pdf-implicit.jsonl`
-- Stderr: `docs/二开规划/harness-transcripts/raw/trigger-convergence-codex-pdf-implicit.stderr.log`
+- Raw stream: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-codex-pdf-implicit.jsonl`
+- Stderr: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-codex-pdf-implicit.stderr.log`
 - The prompt did not mention `t-superpowers`.
 - Codex injected `t-superpowers:t-brainstorming`.
 - Codex also injected `t-superpowers:t-using-superpowers` and `t-superpowers:t-writing-plans`.
@@ -108,8 +108,8 @@ Result: PASS
 
 Evidence:
 
-- Raw stream: `docs/二开规划/harness-transcripts/raw/trigger-convergence-explicit.jsonl`
-- Stderr: `docs/二开规划/harness-transcripts/raw/trigger-convergence-explicit.stderr.log`
+- Raw stream: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-explicit.jsonl`
+- Stderr: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/trigger-convergence-explicit.stderr.log`
 - Codex injected `t-superpowers:t-brainstorming`.
 - Codex also injected `t-superpowers:t-using-superpowers` and `t-superpowers:t-writing-plans`.
 - The model response explicitly entered the `t-superpowers:t-brainstorming` path before asking requirements questions.

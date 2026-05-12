@@ -601,3 +601,38 @@ If `bash tools/t-stage1-check.sh` remains blocked by unrelated dirty `CLAUDE.md`
 - Incomplete-field scan: The transcript summary in Task 5 has fixed file paths and pass observations. If a validation run fails, do not commit that pass summary.
 - Scope check: The plan does not implement path migration, `t-archive`, precheck tooling, state fields, acceptance evidence, or subagent dispatch templates.
 - Risk check: Stage-one validation may be blocked by unrelated dirty `CLAUDE.md`; this is called out in Preconditions and Task 4.
+
+## Verification Log
+
+### 2026-05-12 Implementation Verification
+
+Implementation commit: `e6682bc feat: 收敛 t-superpowers 触发边界`
+
+Harness transcript summary:
+
+- Summary: `docsDev/changes/20260512-trigger-convergence/transcripts/trigger-convergence-stage2.md`
+- Raw logs: `docsDev/changes/20260512-trigger-convergence/transcripts/raw/`
+
+Harness results:
+
+- PASS: Claude simple negative prompt did not enter `t-brainstorming`.
+- PASS: Codex README simple negative prompt did not implicitly select `t-brainstorming`.
+- PASS: Codex complex implicit positive prompt selected `t-brainstorming` without mentioning `t-superpowers`.
+- PASS: Explicit `t-superpowers` PDF export prompt entered the complex-work skill path.
+
+Deterministic checks:
+
+- PASS: `git diff --cached --check`.
+- PASS: `rg -n "1% chance|ABSOLUTELY MUST|DO NOT HAVE A CHOICE|Invoke relevant or requested skills BEFORE" skills/t-using-superpowers/SKILL.md` returned no matches.
+- PASS: scoped `description:` grep confirmed the five Codex-visible descriptions use `ONLY` or `complex`.
+- PASS: `rg -n "^[[:space:]]*allow_implicit_invocation:[[:space:]]*false" . --glob "!vendor/**"` returned no matches.
+- PASS: scoped old `superpowers:<skill>` runtime-reference grep returned no matches.
+- PASS: scoped broad-description grep for `any creative work`, `any work`, and `before any` returned no matches.
+
+Blocked validation:
+
+- BLOCKED: `bash tools/t-stage1-check.sh` failed with `FAIL: excluded entry/instruction files have uncommitted changes` because `CLAUDE.md` and `docs/二开规划/二次开发规划.md` already had unrelated user-owned dirty edits. This was not counted as a pass and is not caused by the trigger-convergence implementation.
+
+Follow-up evidence consolidation:
+
+- Moved trigger-convergence transcripts from `docs/二开规划/harness-transcripts/` into this change directory so `t-archive` can carry the evidence with `docsDev/changes/20260512-trigger-convergence/`.
