@@ -1,7 +1,7 @@
 ---
 change_id: 20260512-archive-precheck
 created_at: 2026-05-12T09:45:05Z
-updated_at: 2026-05-12T09:45:05Z
+updated_at: 2026-05-12T12:17:59Z
 owner: lihuajun
 ---
 
@@ -10,6 +10,7 @@ owner: lihuajun
 ## Change History
 
 - 2026-05-12: Initial design for the archive precheck safety tool.
+- 2026-05-12: Added success stdout JSON metadata contract for parsed Archive Patch sections.
 
 ## Overview
 
@@ -25,6 +26,7 @@ This change adds only `tools/t-archive-precheck`. It performs read-only validati
 - Reject duplicate archive destinations at `docsDev/archive/<change-id>/`.
 - Reject dirty working trees before any archive operation can proceed.
 - Return stable exit codes `0-5` for `t-archive` and humans to report.
+- On success, print JSON metadata for the parsed Archive Patch sections to stdout so future `t-archive` does not need to re-parse Target and Action.
 - Keep the tool lightweight: one file, no network, no LLM calls, no state machine.
 
 ## Non-Goals
@@ -71,7 +73,24 @@ The checks run in this order:
 5. Verify the working tree:
    - `git status --porcelain` must be empty, including untracked files
 
-The tool prints a concise human-readable result to stdout or stderr. On failure it should name the failed check and include the exit code meaning.
+On success, the tool prints a JSON object to stdout:
+
+```json
+{
+  "change_id": "20260512-example",
+  "archive_patches": [
+    {
+      "capability": "archive",
+      "target": "docsDev/specs/archive/spec.md",
+      "action": "create"
+    }
+  ]
+}
+```
+
+The JSON contract intentionally includes only metadata that precheck already validates: capability section title, target, and action. It does not include Requirement bodies or merge-ready markdown; merge semantics belong to the later `t-archive` change.
+
+On failure, the tool prints a concise human-readable error to stderr, names the failed check, and includes the exit code meaning. It must not print success JSON on failure.
 
 ## Files
 
@@ -188,8 +207,23 @@ The tool must prevent archive flows from running when rollback could discard use
 - And `git status --porcelain` is empty
 - When `tools/t-archive-precheck <change-id>` runs
 - Then it must exit `0`
-- And it must report that precheck passed
+- And it must print JSON metadata describing the parsed Archive Patch sections to stdout
 - And it must not modify files
+
+### Requirement: Successful Precheck Emits Archive Patch Metadata
+
+The tool must expose the Archive Patch metadata it already parsed so the future `t-archive` wrapper can consume a stable interface.
+
+#### Scenario: Successful stdout is JSON metadata
+
+- Given a valid Archive Patch section named `archive`
+- And it has `Target: docsDev/specs/archive/spec.md`
+- And it has `Action: create`
+- When the precheck exits `0`
+- Then stdout must be a JSON object with `change_id`
+- And `archive_patches[0].capability` must be `archive`
+- And `archive_patches[0].target` must be `docsDev/specs/archive/spec.md`
+- And `archive_patches[0].action` must be `create`
 
 ## Exit Codes
 
@@ -209,6 +243,7 @@ The tool must prevent archive flows from running when rollback could discard use
 - Do not attempt recovery, cleanup, stash, reset, git clean, or retry.
 - Treat parse ambiguity as exit `2`, not as a best-effort pass.
 - Treat target path ambiguity as exit `3`, not as a best-effort pass.
+- Treat JSON output as success-only API. Failure output remains human-readable stderr plus the stable exit code.
 
 ## Validation
 
@@ -224,7 +259,8 @@ Required checks for this change:
 - Symlink escape under `docsDev/specs/` exits `3`.
 - Existing `docsDev/archive/<change-id>/` exits `4`.
 - Dirty working tree exits `5` and does not modify files.
-- Valid fixture with clean working tree exits `0`.
+- Valid fixture with clean working tree exits `0` and stdout is parseable JSON containing `change_id` and `archive_patches`.
+- Real repository smoke: `tools/t-archive-precheck 20260512-trigger-convergence` exits `0` when the main working tree is clean.
 - `git diff --check -- tools/t-archive-precheck docsDev/changes/20260512-archive-precheck/spec.md docsDev/changes/20260512-archive-precheck/plan.md` exits `0` after implementation and planning.
 - `bash tools/t-stage1-check.sh` exits `0`.
 
@@ -234,6 +270,7 @@ If dirty-working-tree validation requires temporary repository state, run it ins
 
 - Path safety can be wrong if the implementation only checks string prefixes. The implementation must use resolved paths and a strict descendant check.
 - The Archive Patch parser can become too ambitious. It should only check the shape required by precheck; merge semantics belong to the later `t-archive` change.
+- The JSON contract can become too broad. Keep it to metadata already validated by precheck; do not include Requirement bodies in this change.
 - The working tree check can block local development. That is intentional for actual archive safety and should be reported clearly.
 - A future `t-archive` skill might bypass the tool. Its spec must require calling this precheck before any mutation.
 - Upstream rebases may not know about `tools/t-archive-precheck`; preserve it as fork-specific infrastructure.
@@ -258,6 +295,7 @@ The system must run a deterministic archive precheck before any archive workflow
 - And the working tree is clean
 - When the archive precheck runs for that change-id
 - Then it must exit `0`
+- And it must print success JSON with the change-id and Archive Patch metadata
 
 ###### Scenario: Malformed Archive Patch is rejected
 

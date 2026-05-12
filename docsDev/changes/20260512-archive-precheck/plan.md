@@ -561,3 +561,94 @@ Expected: commit succeeds on branch `t-dev`.
 - Safety: Dirty-worktree and valid-pass checks run against temporary git repositories under `/tmp`, not against the main repository while implementation files are dirty.
 - Tool constraints: The planned implementation is single-file, standard-library only, no network, no LLM calls, no cleanup or mutation commands.
 - Exit-code consistency: Failure branches map to the spec's stable `0-5` exit codes.
+
+## Plan Revision: Success JSON Metadata
+
+Date: 2026-05-12T12:17:59Z
+
+This revision supersedes the original Task 1 success output and the original Task 4 valid-pass assertion. Keep the original task structure, but implement and validate the following changes.
+
+### Revised Task 1 Notes
+
+- Import `json`.
+- Parse each Archive Patch section into metadata with these fields:
+  - `capability`: the `### <capability>` section title.
+  - `target`: the raw `Target:` value from the spec.
+  - `action`: the raw `Action:` value, limited to `create` or `update`.
+- Keep Requirement and Scenario checks as shape validation only.
+- Do not parse or emit Requirement bodies in this change.
+- On success, print only this JSON object to stdout:
+
+```json
+{
+  "change_id": "<change-id>",
+  "archive_patches": [
+    {
+      "capability": "<capability>",
+      "target": "docsDev/specs/<capability>/spec.md",
+      "action": "create"
+    }
+  ]
+}
+```
+
+- On failure, continue printing `FAIL[<code>]: ...` to stderr and return the stable exit code. Do not print JSON on failure.
+- `wc -l tools/t-archive-precheck` must still be at or below `100`.
+
+### Revised Task 4 Valid-Pass Assertion
+
+Replace the original `rg -n "OK: archive precheck passed for good"` assertion with a JSON parse assertion:
+
+```bash
+"$repo/tools/t-archive-precheck" good >/tmp/t-precheck-good.json 2>/tmp/t-precheck-good.err
+code=$?
+test "$code" -eq 0
+test ! -s /tmp/t-precheck-good.err
+python3 - <<'PY' /tmp/t-precheck-good.json
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+
+assert data["change_id"] == "good"
+assert data["archive_patches"] == [
+    {
+        "capability": "archive",
+        "target": "docsDev/specs/archive/spec.md",
+        "action": "create",
+    }
+]
+PY
+```
+
+Expected: `test` exits `0`, stderr is empty, and Python exits `0`.
+
+### Additional Real Repository Smoke Test
+
+After the main implementation files are committed or temporarily stashed in a controlled way, run this read-only check from the real repository root:
+
+```bash
+tools/t-archive-precheck 20260512-trigger-convergence >/tmp/t-precheck-real.json 2>/tmp/t-precheck-real.err
+code=$?
+test "$code" -eq 0
+test ! -s /tmp/t-precheck-real.err
+python3 - <<'PY' /tmp/t-precheck-real.json
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+
+assert data["change_id"] == "20260512-trigger-convergence"
+assert data["archive_patches"][0]["capability"] == "triggering"
+assert data["archive_patches"][0]["target"] == "docsDev/specs/triggering/spec.md"
+assert data["archive_patches"][0]["action"] == "create"
+PY
+```
+
+Expected: exit code `0`, no stderr, and JSON metadata for the real `20260512-trigger-convergence` Archive Patch.
+
+Do not run this smoke test while the main repository has uncommitted changes; the tool is required to reject dirty worktrees with exit `5`. If running before the implementation commit, document it as postponed and run it immediately after commit.
+
+## Verification Log
