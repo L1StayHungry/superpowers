@@ -15,8 +15,10 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `t-superpowers:t-using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+**Save plans to:** `docsDev/changes/<change-id>/plan.md`
+- If the approved spec is `docsDev/changes/<change-id>/spec.md`, save the plan beside it as `docsDev/changes/<change-id>/plan.md`.
+- If the approved spec is outside `docsDev/changes/<change-id>/spec.md`, ask for the target `change-id` or docsDev change directory before writing.
+- (User preferences for plan location override this default.)
 
 ## Scope Check
 
@@ -44,7 +46,7 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ## Plan Document Header
 
-**Every plan MUST start with this header:**
+**Every plan MUST start with frontmatter followed by this header:**
 
 ```markdown
 # [Feature Name] Implementation Plan
@@ -57,6 +59,17 @@ This structure informs the task decomposition. Each task should produce self-con
 
 **Tech Stack:** [Key technologies/libraries]
 
+---
+```
+
+Use only these frontmatter fields:
+
+```yaml
+---
+change_id: <change-id>
+created_at: <ISO-8601 UTC timestamp>
+updated_at: <ISO-8601 UTC timestamp>
+owner: <owner>
 ---
 ```
 
@@ -135,7 +148,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to `docsDev/changes/<change-id>/plan.md`. Two execution options:**
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 

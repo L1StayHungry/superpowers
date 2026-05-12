@@ -26,7 +26,7 @@ You MUST create a task for each of these items and complete them in order:
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Write design doc** — save to `docsDev/changes/<change-id>/spec.md` and commit
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
 9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
@@ -108,10 +108,26 @@ digraph brainstorming {
 
 **Documentation:**
 
-- Write the validated design (spec) to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-  - (User preferences for spec location override this default)
-- Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- Write the validated design spec to `docsDev/changes/<change-id>/spec.md`.
+- Use one change directory per brainstorming round. If the user raises an unrelated complex need while another change is active, create a new `change-id` instead of folding it into the existing spec.
+- For a new change, build `change-id` as `YYYYMMDD-<slug>`:
+  - Get the date with `date -u +%Y%m%d`.
+  - Use a slug made of lowercase `a-z`, digits, and hyphen, length 3-40.
+  - If `docsDev/changes/<change-id>/` already exists, stop and ask for a different slug or change-id.
+- Use this frontmatter:
+
+```yaml
+---
+change_id: <change-id>
+created_at: <ISO-8601 UTC timestamp>
+updated_at: <ISO-8601 UTC timestamp>
+owner: <owner>
+---
+```
+
+- When explicitly revising an existing spec, edit `docsDev/changes/<change-id>/spec.md` in place and append a `Change History` entry explaining the revision. Do not silently replace earlier rationale without history.
+- Use elements-of-style:writing-clearly-and-concisely skill if available.
+- Commit the design document to git.
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:

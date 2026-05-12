@@ -517,3 +517,16 @@ Expected: commit succeeds on branch `t-dev`.
 - Change-id coverage: Task 2 adds new-change, collision, unrelated-change, and explicit-revision rules to `t-brainstorming`.
 - Transcript placement: Task 6 writes any harness artifacts under `docsDev/changes/20260512-docsdev-paths/transcripts/`.
 - Scope check: The plan does not implement `t-archive`, `tools/t-archive-precheck`, historical docs migration, or trigger-boundary changes.
+
+## Verification Log
+
+Date: 2026-05-12T04:13:25Z
+
+- Implementation scope: updated `t-brainstorming`, `t-writing-plans`, spec reviewer dispatch, subagent execution handoff, and code review example paths from live `docs/superpowers/{specs,plans}/` instructions to `docsDev/changes/<change-id>/`.
+- Subagent review: Task 2 spec compliance approved; Task 2 code quality approved; Task 3 spec compliance approved; Task 3 code quality finding on frontmatter/header order fixed and re-approved; Task 4 spec compliance approved; Task 4 code quality approved.
+- `git diff --check -- skills/t-brainstorming/SKILL.md skills/t-writing-plans/SKILL.md skills/t-brainstorming/spec-document-reviewer-prompt.md skills/t-subagent-driven-development/SKILL.md skills/t-requesting-code-review/SKILL.md docsDev/changes/20260512-docsdev-paths/spec.md docsDev/changes/20260512-docsdev-paths/plan.md`: PASS.
+- `rg -n "docs/superpowers/(specs|plans)" skills/t-brainstorming skills/t-writing-plans skills/t-subagent-driven-development skills/t-requesting-code-review --glob "!vendor/**"`: PASS, no output, exit code 1.
+- `rg -n "docsDev/changes/<change-id>/spec.md|docsDev/changes/<change-id>/plan.md|docsDev/changes/20260512-deployment-plan/plan.md" skills/t-brainstorming skills/t-writing-plans skills/t-subagent-driven-development skills/t-requesting-code-review --glob "!vendor/**"`: PASS, hits all five live instruction files.
+- `rg -n "docs/superpowers/(specs|plans)" RELEASE-NOTES.md docs/superpowers tests --glob "!**/node_modules/**"`: PASS for scoped historical scan; old paths remain only in historical docs or legacy fixtures.
+- `bash tools/t-stage1-check.sh`: PASS.
+- Runtime harness transcript: not run for this implementation pass; static scoped validation and subagent reviews were used as the acceptance evidence.
