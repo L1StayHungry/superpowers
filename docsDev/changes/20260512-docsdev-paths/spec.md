@@ -1,7 +1,7 @@
 ---
 change_id: 20260512-docsdev-paths
 created_at: 2026-05-12T03:26:23Z
-updated_at: 2026-05-12T03:26:23Z
+updated_at: 2026-05-12T03:48:21Z
 owner: lihuajun
 ---
 
@@ -10,6 +10,7 @@ owner: lihuajun
 ## Change History
 
 - 2026-05-12: Initial design for stage 2 runtime artifact path migration.
+- 2026-05-12: Added review refinements for requesting-code-review path coverage, change-id boundaries, spec iteration, live-instruction scope, and transcript placement.
 
 ## Overview
 
@@ -65,7 +66,19 @@ Use the existing `docsDev/changes/<change-id>/` structure as the single runtime 
 - Use the same minimal frontmatter fields as the spec.
 - Avoid creating a separate plan-only change directory when the spec already lives under `docsDev/changes/<change-id>/spec.md`.
 
-Supporting prompts and examples that influence runtime behavior should be updated to the new paths. Historical docs, release notes, and old test fixtures may keep `docs/superpowers/` when they are not used as live instructions for new artifact creation.
+Supporting prompts and examples that influence runtime behavior should be updated to the new paths.
+
+"Live runtime instruction" means a path string that appears in:
+
+- A `SKILL.md` frontmatter or body.
+- A markdown template referenced by a `SKILL.md` as a dispatch, reviewer, or handoff prompt.
+
+"Historical or non-live reference" means a path string that appears in:
+
+- `vendor/`, release notes, changelogs, upstream-contribution docs, historical planning docs, or legacy fixtures.
+- Tests that intentionally exercise pre-migration upstream behavior.
+
+Historical and non-live references may keep `docs/superpowers/` when they do not instruct agents to create new runtime artifacts.
 
 ## Files
 
@@ -75,6 +88,7 @@ Expected implementation files:
 - Modify `skills/t-writing-plans/SKILL.md`: plan output path, handoff message, and path examples.
 - Modify `skills/t-brainstorming/spec-document-reviewer-prompt.md`: reviewer dispatch path reference.
 - Modify `skills/t-subagent-driven-development/SKILL.md`: example plan path if it is used as an execution handoff prompt.
+- Modify `skills/t-requesting-code-review/SKILL.md`: dispatch template `PLAN_OR_REQUIREMENTS` path example.
 
 Expected validation artifacts may be added under `docsDev/changes/20260512-docsdev-paths/transcripts/` if manual harness checks are run.
 
@@ -98,6 +112,25 @@ Expected validation artifacts may be added under `docsDev/changes/20260512-docsd
 - When `t-brainstorming` attempts to create the same `change-id`
 - Then it must stop and ask for a different slug or change-id
 - And it must not overwrite the existing spec, plan, or transcripts
+
+#### Scenario: Iterating an existing spec is allowed via explicit edit
+
+- Given `docsDev/changes/<change-id>/spec.md` already exists
+- When the user explicitly asks to revise that existing spec
+- Then `t-brainstorming` may edit the spec in place
+- And it must append a `Change History` entry describing the revision reason
+- And it must not silently replace earlier rationale without history
+
+### Requirement: One Brainstorming Round Maps To One New Change-Id
+
+`t-brainstorming` must not append unrelated specs into an existing change directory.
+
+#### Scenario: New complex need during an existing change
+
+- Given the user is mid-implementation of change-id A
+- When the user asks for an unrelated complex feature
+- Then `t-brainstorming` must create a new change-id B
+- And it must not edit A's spec to cover B
 
 ### Requirement: Writing Plans Writes Plan Beside Approved Spec
 
@@ -140,11 +173,12 @@ Required checks for this change:
 
 - `git diff --check -- skills/t-brainstorming/SKILL.md skills/t-writing-plans/SKILL.md skills/t-brainstorming/spec-document-reviewer-prompt.md skills/t-subagent-driven-development/SKILL.md docsDev/changes/20260512-docsdev-paths/spec.md`
 - Scoped live-path scan returns no matches:
-  `rg -n "docs/superpowers/(specs|plans)" skills/t-brainstorming skills/t-writing-plans skills/t-subagent-driven-development --glob "!vendor/**"`
+  `rg -n "docs/superpowers/(specs|plans)" skills/t-brainstorming skills/t-writing-plans skills/t-subagent-driven-development skills/t-requesting-code-review --glob "!vendor/**"`
 - Scoped new-path scan confirms the live skills mention `docsDev/changes/<change-id>/spec.md` and `docsDev/changes/<change-id>/plan.md`.
 - Explicit complex brainstorming harness: a prompt such as "用 t-superpowers，我要做一个 PDF 导出功能" writes the design spec to `docsDev/changes/<change-id>/spec.md`, not `docs/superpowers/specs/`.
 - Writing-plans harness: given an approved spec at `docsDev/changes/<change-id>/spec.md`, `t-writing-plans` writes `docsDev/changes/<change-id>/plan.md`, not `docs/superpowers/plans/`.
 - File-state assertion after harness runs: `docs/superpowers/` has no new files from the new workflow.
+- If any harness check is run for this change, transcript and stderr files must live under `docsDev/changes/20260512-docsdev-paths/transcripts/`, not under `docs/二开规划/harness-transcripts/`.
 - If `bash tools/t-stage1-check.sh` remains blocked by unrelated dirty entry/instruction files, document the blocker and do not count it as passed.
 
 ## Risks
@@ -189,3 +223,17 @@ The system must store new complex-work runtime artifacts under `docsDev/changes/
 - When a new brainstorming flow tries to use the same change-id
 - Then the flow must stop and ask for a different slug or change-id
 - And it must not overwrite existing change artifacts
+
+###### Scenario: Existing spec revision
+
+- Given `docsDev/changes/<change-id>/spec.md` already exists
+- When the user explicitly asks to revise that spec
+- Then the flow may edit the existing spec
+- And it must append a `Change History` entry describing the revision reason
+
+###### Scenario: Unrelated complex need gets a new change-id
+
+- Given a current change-id is already being implemented or planned
+- When the user raises an unrelated complex need
+- Then the flow must create a separate `docsDev/changes/<new-change-id>/`
+- And it must not fold the unrelated need into the existing change
