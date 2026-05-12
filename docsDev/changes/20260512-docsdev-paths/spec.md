@@ -1,7 +1,7 @@
 ---
 change_id: 20260512-docsdev-paths
 created_at: 2026-05-12T03:26:23Z
-updated_at: 2026-05-12T03:48:21Z
+updated_at: 2026-05-12T06:40:32Z
 owner: lihuajun
 ---
 
@@ -11,6 +11,7 @@ owner: lihuajun
 
 - 2026-05-12: Initial design for stage 2 runtime artifact path migration.
 - 2026-05-12: Added review refinements for requesting-code-review path coverage, change-id boundaries, spec iteration, live-instruction scope, and transcript placement.
+- 2026-05-12: Corrected validation command coverage for the requesting-code-review skill and plan verification log.
 
 ## Overview
 
@@ -171,7 +172,7 @@ Live t-superpowers instructions must not tell agents to create new runtime artif
 
 Required checks for this change:
 
-- `git diff --check -- skills/t-brainstorming/SKILL.md skills/t-writing-plans/SKILL.md skills/t-brainstorming/spec-document-reviewer-prompt.md skills/t-subagent-driven-development/SKILL.md docsDev/changes/20260512-docsdev-paths/spec.md`
+- `git diff --check -- skills/t-brainstorming/SKILL.md skills/t-writing-plans/SKILL.md skills/t-brainstorming/spec-document-reviewer-prompt.md skills/t-subagent-driven-development/SKILL.md skills/t-requesting-code-review/SKILL.md docsDev/changes/20260512-docsdev-paths/spec.md docsDev/changes/20260512-docsdev-paths/plan.md`
 - Scoped live-path scan returns no matches:
   `rg -n "docs/superpowers/(specs|plans)" skills/t-brainstorming skills/t-writing-plans skills/t-subagent-driven-development skills/t-requesting-code-review --glob "!vendor/**"`
 - Scoped new-path scan confirms the live skills mention `docsDev/changes/<change-id>/spec.md` and `docsDev/changes/<change-id>/plan.md`.
