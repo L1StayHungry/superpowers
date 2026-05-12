@@ -1,6 +1,6 @@
 ---
 name: t-systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+description: "Use ONLY for complex bugs, failing tests, or unexpected behavior where the root cause is unknown. Do NOT use for simple edits, Q&A, or pure code reading."
 ---
 
 # Systematic Debugging

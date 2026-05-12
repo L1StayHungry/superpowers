@@ -1,6 +1,6 @@
 ---
 name: t-brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+description: "Use ONLY for complex multi-file features, behavior changes, or requirements that need clarification before implementation. Do NOT use for single-file edits, copy/style/config tweaks, Q&A, or pure code reading."
 ---
 
 # Brainstorming Ideas Into Designs

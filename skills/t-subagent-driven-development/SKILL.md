@@ -1,6 +1,6 @@
 ---
 name: t-subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: "Use ONLY when executing a written implementation plan with independent tasks that benefit from parallel agents. Do NOT use for simple edits, Q&A, or pure code reading."
 ---
 
 # Subagent-Driven Development

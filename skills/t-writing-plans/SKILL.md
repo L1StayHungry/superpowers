@@ -1,6 +1,6 @@
 ---
 name: t-writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+description: "Use ONLY when a complex approved spec or requirements need a multi-step implementation plan before coding. Do NOT use for simple single-file edits, Q&A, or pure code reading."
 ---
 
 # Writing Plans

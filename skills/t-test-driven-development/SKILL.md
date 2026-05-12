@@ -1,6 +1,6 @@
 ---
 name: t-test-driven-development
-description: Use when implementing any feature or bugfix, before writing implementation code
+description: "Use ONLY when implementing complex behavior changes or bugfixes that need test-first work. Do NOT use for copy/style/config tweaks, Q&A, or pure code reading."
 ---
 
 # Test-Driven Development (TDD)

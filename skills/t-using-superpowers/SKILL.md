@@ -7,13 +7,25 @@ description: Use when starting any conversation - establishes how to find and us
 If you were dispatched as a subagent to execute a specific task, skip this skill.
 </SUBAGENT-STOP>
 
-<EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+<TRIGGER-BOUNDARY>
+Use t-* skills when the user explicitly asks for t-superpowers or when the work is clearly complex.
 
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+Mandatory t-* skill triggers:
+- Explicit user request for `t-superpowers`, a specific `t-*` skill, or a named workflow such as brainstorming, systematic debugging, TDD, subagent-driven development, code review, or finishing a branch.
+- Complex multi-file feature work, behavior changes, or requirements that need clarification before implementation.
+- Complex bugs, failing tests, unexpected behavior, or root-cause-unknown problems.
+- Implementation of complex behavior changes or bugfixes where test-first work is appropriate.
+- Execution of a written multi-step plan where independent tasks can be split across agents.
 
-This is not negotiable. This is not optional. You cannot rationalize your way out of this.
-</EXTREMELY-IMPORTANT>
+Do not force t-* skills for clearly simple requests:
+- Single-file copy, style, config, spelling, formatting, or mechanical edits.
+- Pure Q&A, pure code reading, explanations, or local investigation that does not ask for changes.
+- User requests that explicitly ask for direct implementation without the full workflow and are low risk.
+
+Ambiguous requests:
+- Do not silently enter the full workflow.
+- Ask one concise question, such as "这看起来比较复杂，要走 t-brainstorming 吗？", or proceed in direct mode while explicitly stating "按简单请求处理；如需走 t-superpowers 请说明".
+</TRIGGER-BOUNDARY>
 
 ## Instruction Priority
 
@@ -43,56 +55,49 @@ Skills use Claude Code tool names. Non-CC platforms: see `references/copilot-too
 
 ## The Rule
 
-**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+Use the smallest process that fits the request.
+
+Invoke a relevant t-* skill before implementation when the user explicitly asks for it or when the work is clearly complex. Do not invoke a skill just because one could theoretically apply to a simple request.
 
 ```dot
 digraph skill_flow {
     "User message received" [shape=doublecircle];
-    "About to EnterPlanMode?" [shape=doublecircle];
-    "Already brainstormed?" [shape=diamond];
-    "Invoke brainstorming skill" [shape=box];
-    "Might any skill apply?" [shape=diamond];
-    "Invoke Skill tool" [shape=box];
-    "Announce: 'Using [skill] to [purpose]'" [shape=box];
-    "Has checklist?" [shape=diamond];
-    "Create TodoWrite todo per item" [shape=box];
-    "Follow skill exactly" [shape=box];
-    "Respond (including clarifications)" [shape=doublecircle];
+    "Explicit t-superpowers or t-* request?" [shape=diamond];
+    "Clearly complex development work?" [shape=diamond];
+    "Clearly simple request?" [shape=diamond];
+    "Ambiguous complexity?" [shape=diamond];
+    "Invoke requested or relevant t-* skill" [shape=box];
+    "Proceed with harness default flow" [shape=box];
+    "Ask one concise boundary question" [shape=box];
+    "Respond or implement directly" [shape=doublecircle];
 
-    "About to EnterPlanMode?" -> "Already brainstormed?";
-    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
-    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
-    "Invoke brainstorming skill" -> "Might any skill apply?";
-
-    "User message received" -> "Might any skill apply?";
-    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
-    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
-    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
-    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
-    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
-    "Has checklist?" -> "Follow skill exactly" [label="no"];
-    "Create TodoWrite todo per item" -> "Follow skill exactly";
+    "User message received" -> "Explicit t-superpowers or t-* request?";
+    "Explicit t-superpowers or t-* request?" -> "Invoke requested or relevant t-* skill" [label="yes"];
+    "Explicit t-superpowers or t-* request?" -> "Clearly complex development work?" [label="no"];
+    "Clearly complex development work?" -> "Invoke requested or relevant t-* skill" [label="yes"];
+    "Clearly complex development work?" -> "Clearly simple request?" [label="no"];
+    "Clearly simple request?" -> "Proceed with harness default flow" [label="yes"];
+    "Clearly simple request?" -> "Ambiguous complexity?" [label="no"];
+    "Ambiguous complexity?" -> "Ask one concise boundary question" [label="yes"];
+    "Ambiguous complexity?" -> "Proceed with harness default flow" [label="no"];
+    "Proceed with harness default flow" -> "Respond or implement directly";
+    "Ask one concise boundary question" -> "Respond or implement directly";
+    "Invoke requested or relevant t-* skill" -> "Respond or implement directly";
 }
 ```
 
 ## Red Flags
 
-These thoughts mean STOP—you're rationalizing:
+These thoughts mean STOP and check the trigger boundary:
 
 | Thought | Reality |
 |---------|---------|
-| "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
-| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
-| "Let me gather information first" | Skills tell you HOW to gather information. |
-| "This doesn't need a formal skill" | If a skill exists, use it. |
-| "I remember this skill" | Skills evolve. Read current version. |
-| "This doesn't count as a task" | Action = task. Check for skills. |
-| "The skill is overkill" | Simple things become complex. Use it. |
-| "I'll just do this one thing first" | Check BEFORE doing anything. |
-| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
-| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+| "This is simple, but a skill exists" | Skill existence alone is not enough. Use direct mode for clearly simple requests. |
+| "This is complex, but I can skip planning" | Complex multi-file or behavior-changing work needs the relevant t-* workflow. |
+| "The user named a skill, but I can summarize from memory" | Explicit skill requests must use the requested skill. |
+| "The bug seems obvious" | If the root cause is not proven, use t-systematic-debugging. |
+| "I can enter brainstorming just in case" | Ambiguous requests require a boundary question or explicit direct-mode statement. |
+| "A description matched, so it must be complex" | Confirm the request is actually complex before continuing with a heavyweight workflow. |
 
 ## Skill Priority
 
