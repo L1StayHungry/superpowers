@@ -302,112 +302,107 @@ subagent 必须继承主流程约束：
 
 ## 7. 状态与验收原则
 
-复杂需求的状态应由 `plan.md` frontmatter 或确定性状态工具维护。
-
-状态推进必须可追踪。
-
-推荐状态：
+复杂需求**不引入状态机**。`plan.md` frontmatter 只保留最小元数据：
 
 ```text
-draft
-ready
-running
-implemented
-blocked
-verified
-accepted
-archived
+change_id
+created_at
+updated_at
+owner
 ```
 
 原则：
 
-* AI 可以根据实现和验证证据推进到 `verified`。
-* AI 不得自行推进到 `accepted`。
-* `accepted` 必须来自人类验收证据。
-* `archived` 只能在归档事务完成后出现。
-* 状态变化必须记录历史。
-* 关键状态变化应通过确定性校验器或状态转移工具完成。
+* 实现是否完成，靠 `t-verification-before-completion` skill 的新鲜证据判断，不靠 frontmatter 状态字段。
+* 归档由人工启动；agent 不得自行判定"看起来用户同意了"就触发归档。
+* 不引入 `status` / `status_history` / `blocked_reason` / `unblocked_reason` / `acceptance_evidence` / `pending_acceptance_evidence` / `archive_failure` 等字段。
+* 不引入 `verified → accepted → archived` 等状态转移规则。
+* 不做 conversation 类验收的 sha256 / transcript 核验；不做 PR 状态在线核验。
 
-验收证据可以来自：
+为什么不做：
 
-```text
-conversation
-pr
-ticket
-```
-
-如果证据无法在线验证，只能记录为 pending，不能直接 accepted。
+* 10 人内部团队，PR review + 显式人工指令足以扛住"是否真的可以归档"。
+* 状态机和严格 acceptance 校验的复杂度，远高于它们在过去 changes 里实际帮我们挡掉的问题数量。
+* `git log` 和 PR 历史已经是状态变化的可追踪记录，不需要在 frontmatter 里另起一份。
 
 ---
 
 ## 8. 归档原则
 
-归档的目标不是简单移动文件，而是把已验收的复杂变更沉淀为长期团队规格。
+归档的目标是把已验收的复杂变更沉淀为长期团队规格（`docsDev/specs/<capability>/spec.md`）。
 
-归档前必须满足：
-
-* 当前实现已有验证证据。
-* 用户或人工系统已经明确验收。
-* `spec.md` 中存在结构化 Archive Patch。
-* Archive Patch 目标在 `docsDev/specs/` 内。
-* 归档目标路径通过规范化检查。
-* 归档目标不存在冲突或 `.tmp` 残留。
-* 事务失败时不能声称 archived。
-
-归档应避免依赖：
+归档由 `t-archive` skill 包装，**必须由用户显式触发**（"归档 <change-id>" / "走 t-archive" / "把这个 change 沉淀到 specs"）。skill 内部按下面五步执行，全部落到一个 git commit 内：
 
 ```text
-git checkout
+1. tools/t-archive-precheck <change-id>
+2. 解析 docsDev/changes/<change-id>/spec.md 末尾的 Archive Patch 块
+3. 合并到 docsDev/specs/<capability>/spec.md（Action=create / update；
+   并在 long-term spec 的 Change History 顶部 append 一条）
+4. git mv docsDev/changes/<change-id> docsDev/archive/<change-id>
+5. git add docsDev/specs docsDev/archive
+   git commit -m "archive <change-id>: <summary>"
 ```
 
-作为默认回滚方式。
+`tools/t-archive-precheck` 只做下列检查：
 
-归档应该尽量使用：
+* `docsDev/changes/<change-id>/` 与 `spec.md` 存在。
+* `spec.md` 末尾含 `## Archive Patch` 块且字段齐全（Target / Action / Requirement / Scenario）。
+* Archive Patch 的 Target 经过路径规范化后严格位于 `docsDev/specs/` 之内（解析 symlink；禁止 `..` / 绝对路径；禁止 target 等于 specs 根）。
+* `docsDev/archive/<change-id>/` 不存在（幂等）。
+* `git status --porcelain` 为空（工作区干净，确保 `git reset` 可作为安全兜底）。
 
-* backup
-* checksum
-* temporary file
-* atomic rename
-* idempotency check
-* failure log
+触发边界（写入 t-archive SKILL frontmatter description）：
 
-失败时：
+* 只在用户**显式**说"归档"且带 change-id 时触发。
+* **不允许**在 `t-verification-before-completion` 通过后自动接管。
+* **不允许**根据"看起来 ok 了" / "可以了" 等模糊语义推断归档意图。
+* **不允许**把 t-archive 串到 t-using-superpowers 的"复杂需求自动链路"里。
 
-* 原 change 状态保持 accepted。
-* 记录 `archive_failure`。
-* 不自动反复重试破坏性清理。
-* 必要时请求人工介入。
+失败兜底：
+
+* 第 1 步 precheck 退出非零：skill 报告退出码语义（越界 / 幂等 / 工作区脏 / 字段缺失），不动任何文件。
+* 第 2-5 步任一失败：`git reset --hard HEAD && git clean -fd`（精确回到归档前的 HEAD，因 precheck 已确认起点干净）。
+* commit 之后才发现错：用户决定 `git revert <archive-commit>` 或新 commit 修正；skill **不自动重试**。
+
+明确**不做**：
+
+* 事务化备份（`.tmp/` 目录 + checksum + atomic rename + 按步骤分类回滚表）。
+* `archive_failure` frontmatter 块、状态保持 accepted 等复杂回滚语义。
+* 失败后自动重试、自动破坏性清理。
+* 并发 sha256 校验（precheck 工作区干净 + git mv 在单 commit 内已经足够）。
+
+为什么这么做：
+
+* skill 包装解决了"用户记不住一串命令、不想手动 merge markdown"的真实体验问题。
+* skill 内部仍然轻量：调一个 ≤ 100 行 precheck + 几个 git 命令 + Markdown merge，没有事务化复杂度。
+* git 已经天然提供原子提交、完整历史、`reset --hard` 回滚兜底；再加一层事务化备份只是在用户和 git 之间塞了一层间接。
 
 ---
 
 ## 9. 确定性工具原则
 
-关键门禁不能只靠 prompt 自述。
+确定性工具只用在**真正不能靠 prompt 自述**的位置，且每个工具职责单一、实现轻量。
 
-涉及以下行为时，优先使用确定性脚本或工具：
-
-* 状态转移
-* acceptance evidence 校验
-* Archive Patch 校验
-* 路径 normalize
-* archive precheck
-* 幂等检查
-* forbidden path 检查
-* namespace 回归检查
-
-现有或预期工具包括：
+当前在用 / 计划中的工具：
 
 ```text
-tools/t-stage1-check.sh
-tools/t-validate
-tools/t-state
+tools/t-stage1-check.sh    # 阶段一命名空间回归（已实现）
+tools/t-archive-precheck   # 阶段二归档前检查（计划中，≤ 100 行）
 ```
 
-如果工具尚未实现：
+`tools/t-archive-precheck` 的职责见 §8。除此之外**不再引入**：
 
-* 不要假装已经有确定性保障。
-* 应先规划工具接口和测试。
-* 不要让 LLM 直接手写关键 frontmatter 作为长期默认路径。
+* `tools/t-validate` 统一校验器（state-transition API、退出码语义、proposed-frontmatter 注入等）。
+* `tools/t-state` 状态机工具。
+* conversation 类 acceptance 的 transcript + sha256 核验工具。
+* PR 在线状态核验工具。
+
+原则：
+
+* 关键命名空间约束（阶段一）继续靠 `tools/t-stage1-check.sh` + CI。
+* 路径泄漏 / `superpowers:<x>` 残留这类回归，靠 CI 的 `rg` grep 检查即可，不需要单独 CLI。
+* 触发收敛、verification、subagent 纪律继续靠 skill prompt 本身，**不**为它们另起确定性校验器。
+* 如果有人想新加一个工具，先回答："它解决的具体问题在过去 3 个月内的 changes 里出现过几次？"答案是零就不加。
 
 ---
 
@@ -471,9 +466,8 @@ contribute this back
 ```text
 一个路径迁移
 一个触发收敛
-一个 validator 能力
-一个 archive 能力
-一个 subagent 纪律增强
+一个轻量工具（如 tools/t-archive-precheck）
+一个归档约定调整
 一个 harness metadata 调整
 一个测试或 fixture
 ```
@@ -535,44 +529,38 @@ Codex description 不误触发重 skill
 
 ```text
 不再写 docs/superpowers/
-新产物进入 docsDev/
-归档目标进入 docsDev/specs/
-```
-
-### 状态机
-
-至少验证：
-
-```text
-非法转移被拒绝
-blocked 缺 reason 被拒绝
-accepted 缺验收证据被拒绝
-verified 需要 verification log
+新产物进入 docsDev/changes/<change-id>/
+归档目标进入 docsDev/archive/<change-id>/
+长期规格写入 docsDev/specs/<capability>/spec.md
 ```
 
 ### 归档
 
-至少验证：
+归档全部通过 `t-archive` skill 触发，验证项：
 
 ```text
-缺验收不能归档
-Target 越界不能归档
-缺 Scenario 不能归档
-重复归档被拒绝
-.tmp 残留被拒绝
-失败后原状态不变
-成功后进入 docsDev/archive/
+t-archive 自动触发拦截：verification 通过 / "看起来 ok 了" 等模糊语义
+                       不得自动调用 t-archive；无 archive commit 产生
+t-archive 显式触发 + Archive Patch Target 越界（含 ".." / symlink /
+                       target 等于 specs 根）：skill 报告 precheck
+                       退出码 3；无文件被修改
+t-archive 显式触发 + 缺 Scenario / Action / Requirement：skill 报告 precheck
+                       退出码 2；无文件被修改
+t-archive 显式触发 + docsDev/archive/<change-id>/ 已存在：skill 报告
+                       precheck 退出码 4；无文件被修改
+t-archive 显式触发 + 工作区不干净：skill 报告 precheck 退出码 5；
+                       不动任何文件，不自动 stash
+t-archive 合法归档：长期 spec 含 ADDED/MODIFIED 内容；
+                   docsDev/changes/<change-id>/ 消失；
+                   docsDev/archive/<change-id>/ 出现；
+                   git log 有一条 archive commit
 ```
+
+> 归档相关的"事务化失败回滚"、"原状态保持 accepted"、"`.tmp` 残留" 等场景对应的设计已经被砍掉，**不再作为验证项**。
 
 ### subagent
 
-至少验证：
-
-```text
-subagent 不写 docs/superpowers/
-subagent 写入 verification log
-subagent 继承 TDD / path / verification policy
-```
+subagent 必须继承主流程的路径、TDD、verification 纪律，但**不引入**强制 dispatch prompt 模板。验证靠对应 skill 自身的 prompt + PR review，不为它单独建测试套件。
 
 ---
 
@@ -588,13 +576,20 @@ subagent 继承 TDD / path / verification policy
 - 恢复旧 t-dev v1 工作流
 - 创建 t-dev/
 - 把阶段计划全文塞进 AGENTS.md
-- 手动绕过 validator 修改关键状态
 - 没有验证证据就声称完成
-- 没有人类验收就 accepted
-- 归档事务未完成就 archived
-- 用 git checkout 作为默认归档回滚
+- 让 agent 自行判定"看起来用户同意了"就触发 t-archive
+- 在 t-verification-before-completion 通过后自动接管 t-archive
+- 把 t-archive 串到 t-using-superpowers 的"复杂需求自动链路"里
+- 在 plan.md frontmatter 上偷偷加回 status / status_history /
+  acceptance_evidence 等已被显式砍掉的字段
+- 重新引入 tools/t-validate / tools/t-state 等大型校验器
+- 给 t-archive skill 内部塞回事务化（backup + sha256 + atomic rename +
+  按步骤回滚表 + archive_failure 块）
+- 重新引入 conversation sha256 / PR 在线核验
+- 在 working tree 不干净时执行 t-archive
+- t-archive 失败后自动重试或破坏性清理
 - 一次性修改多个无关 skill
-- 让 subagent 脱离主流程约束
+- 让 subagent 脱离主流程的路径 / TDD / verification 纪律
 ```
 
 ---
@@ -667,4 +662,4 @@ Risks:
 ```
 
 不要把“模型这次答对了”当成长期质量保证。
-要把规则沉淀到 skill、hook、validator、fixture 或文档中。
+要把规则沉淀到 skill、hook、轻量工具、CI 检查、fixture 或文档中。
