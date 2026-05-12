@@ -651,4 +651,56 @@ Expected: exit code `0`, no stderr, and JSON metadata for the real `20260512-tri
 
 Do not run this smoke test while the main repository has uncommitted changes; the tool is required to reject dirty worktrees with exit `5`. If running before the implementation commit, document it as postponed and run it immediately after commit.
 
+## Plan Revision: Change-Id Fixture Format
+
+Date: 2026-05-12T13:06:53Z
+
+This revision supersedes any original fixture examples that used bare IDs such as `good`, `missing-patch`, `dotdot`, or `already-archived`.
+
+All fixture change IDs must match the repository format `YYYYMMDD-<slug>`. Use these mappings when executing or reviewing the earlier tasks:
+
+- `good` -> `20260512-good`
+- `already-archived` -> `20260512-already-archived`
+- `missing-patch` -> `20260512-missing-patch`
+- `missing-target` -> `20260512-missing-target`
+- `missing-action` -> `20260512-missing-action`
+- `bad-action` -> `20260512-bad-action`
+- `missing-requirement` -> `20260512-missing-req`
+- `missing-scenario` -> `20260512-missing-scenario`
+- `dotdot` -> `20260512-dotdot-target`
+- `outside` -> `20260512-outside-path`
+- `specs-root` -> `20260512-specs-root`
+- `symlink-escape` -> `20260512-symlink-escape`
+
+The valid-pass JSON assertion should expect:
+
+```python
+assert data["change_id"] == "20260512-good"
+assert data["archive_patches"] == [
+    {
+        "capability": "archive",
+        "target": "docsDev/specs/archive/spec.md",
+        "action": "create",
+    }
+]
+```
+
+Invalid change-id validation should use `bad-id` and expect exit `1` before any path lookup.
+
+The missing-change validation should use `20260512-does-not-exist`, not `does-not-exist`, so it tests the missing directory branch after the change-id format gate passes.
+
 ## Verification Log
+
+Date: 2026-05-12T13:18:20Z
+
+- Implementation: created `tools/t-archive-precheck` as a 98-line executable Python script.
+- Task 1 review: spec compliance and code quality reviews initially found parser and path-contract issues; fixes were applied for terminal Archive Patch, non-empty capability heading, exact `##### Requirement`, exact `###### Scenario`, absolute target rejection, raw `..` target rejection, invalid change-id rejection, and success JSON metadata.
+- Task 2 fixture validation: argument and Archive Patch shape failures passed in `/tmp/t-archive-precheck-shape.OACqsX/repo`, covering invalid change-id, missing change, missing Archive Patch, missing Target, missing Action, unsupported Action, missing Requirement, missing Scenario, empty capability heading, and non-terminal Archive Patch.
+- Task 3 fixture validation: target path safety failures passed in `/tmp/t-archive-precheck-path.qlbw4k/repo`, covering `..`, outside path, specs root, symlink escape, absolute target, and normalized-inside `..`.
+- Task 4 fixture validation: idempotency, valid JSON success, and dirty worktree checks passed in `/tmp/t-archive-precheck-state.TphW7d/repo`.
+- Main-controller harness: representative `/tmp` harness passed for exit codes `1`, `2`, `3`, `4`, `5`, and success JSON.
+- Static validation: `git diff --check -- tools/t-archive-precheck docsDev/changes/20260512-archive-precheck/spec.md docsDev/changes/20260512-archive-precheck/plan.md` passed.
+- Static validation: `bash tools/t-stage1-check.sh` passed.
+- Static validation: `PYTHONPYCACHEPREFIX=/tmp/t-archive-precheck-pycache-main2 python3 -m py_compile tools/t-archive-precheck` passed.
+- Static validation: mutation grep for git/file destructive operations returned no output, exit code `1`.
+- Real repository smoke: postponed until after this implementation commit because `tools/t-archive-precheck` and documentation changes make the main worktree intentionally dirty before commit.

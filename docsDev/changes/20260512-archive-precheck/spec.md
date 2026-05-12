@@ -1,7 +1,7 @@
 ---
 change_id: 20260512-archive-precheck
 created_at: 2026-05-12T09:45:05Z
-updated_at: 2026-05-12T12:17:59Z
+updated_at: 2026-05-12T13:15:03Z
 owner: lihuajun
 ---
 
@@ -11,6 +11,8 @@ owner: lihuajun
 
 - 2026-05-12: Initial design for the archive precheck safety tool.
 - 2026-05-12: Added success stdout JSON metadata contract for parsed Archive Patch sections.
+- 2026-05-12: Clarified that change-id arguments must follow the repository change-id format.
+- 2026-05-12: Added invalid change-id behavior to the Archive Patch for long-term specs.
 
 ## Overview
 
@@ -21,6 +23,7 @@ This change adds only `tools/t-archive-precheck`. It performs read-only validati
 ## Goals
 
 - Provide a small deterministic command: `tools/t-archive-precheck <change-id>`.
+- Reject invalid change-id arguments that do not match `YYYYMMDD-<slug>`.
 - Verify that `docsDev/changes/<change-id>/spec.md` exists and contains a valid `## Archive Patch` block.
 - Reject Archive Patch targets outside `docsDev/specs/`, including `..`, absolute-path escape, symlink escape, and target equal to the specs root.
 - Reject duplicate archive destinations at `docsDev/archive/<change-id>/`.
@@ -56,6 +59,7 @@ The checks run in this order:
 
 1. Validate the argument and required source files:
    - exactly one `<change-id>` argument is required
+   - `<change-id>` must match `YYYYMMDD-<slug>` where slug contains lowercase `a-z`, digits, and hyphen, length 3-40
    - `docsDev/changes/<change-id>/` exists
    - `docsDev/changes/<change-id>/spec.md` exists
 2. Parse the `## Archive Patch` block in `spec.md`:
@@ -116,6 +120,14 @@ The tool must validate archive readiness without modifying the repository.
 - When `tools/t-archive-precheck` runs
 - Then it must exit `1`
 - And it must not modify files
+
+#### Scenario: Invalid change-id argument
+
+- Given `<change-id>` does not match `YYYYMMDD-<slug>`
+- When `tools/t-archive-precheck <change-id>` runs
+- Then it must exit `1`
+- And it must report that the change-id is invalid
+- And it must not construct source or archive paths from that value
 
 #### Scenario: Missing change directory or spec
 
@@ -250,6 +262,7 @@ The tool must expose the Archive Patch metadata it already parsed so the future 
 Required checks for this change:
 
 - `tools/t-archive-precheck` with no argument exits `1`.
+- Invalid change-id such as `bad-id` exits `1`.
 - Missing `docsDev/changes/<change-id>/` exits `1`.
 - Missing `## Archive Patch` exits `2`.
 - Missing `Target`, missing `Action`, unsupported `Action`, missing `Requirement:`, or missing `Scenario:` exits `2`.
@@ -296,6 +309,13 @@ The system must run a deterministic archive precheck before any archive workflow
 - When the archive precheck runs for that change-id
 - Then it must exit `0`
 - And it must print success JSON with the change-id and Archive Patch metadata
+
+###### Scenario: Invalid change-id is rejected
+
+- Given a change-id argument does not match `YYYYMMDD-<slug>`
+- When the archive precheck runs for that argument
+- Then it must exit `1`
+- And the archive workflow must not construct source or archive paths from that value
 
 ###### Scenario: Malformed Archive Patch is rejected
 
