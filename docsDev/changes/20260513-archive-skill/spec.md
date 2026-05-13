@@ -1,7 +1,7 @@
 ---
 change_id: 20260513-archive-skill
 created_at: 2026-05-13T07:16:01Z
-updated_at: 2026-05-13T07:16:01Z
+updated_at: 2026-05-13T07:35:48Z
 owner: lihuajun
 ---
 
@@ -10,6 +10,7 @@ owner: lihuajun
 ## Change History
 
 - 2026-05-13: Initial design for the explicit `t-archive` skill wrapper.
+- 2026-05-13: Changed this change's Archive Patch to update the archive spec after `20260512-archive-precheck` creates it, and tightened archive execution details for target existence checks, commit summary source, UTC dates, staged checks, and stage1-check validation.
 
 ## Overview
 
@@ -55,16 +56,23 @@ The skill body should follow this flow:
 3. If precheck exits non-zero, report the exit code meaning and stderr. Do not edit, stage, stash, reset, or clean anything.
 4. If precheck exits zero, parse stdout as JSON. Use it as the authoritative metadata list for Archive Patch capability, target, and action.
 5. Read `docsDev/changes/<change-id>/spec.md` and extract the body of each Archive Patch section. The skill may parse the markdown directly for Requirement bodies because precheck intentionally exposes only metadata.
-6. For each patch:
+6. Before writing any target files, validate target existence for every patch:
+   - `Action: create` requires the target not to exist.
+   - `Action: update` requires the target to exist.
+   - If any target violates this rule, stop without rollback because no mutation has happened yet.
+7. For each patch:
    - `Action: create`: the target must not already exist. Create a long-term spec file using the Stage 2 template.
    - `Action: update`: the target must already exist. Update it in place.
    - Append one new Change History entry at the top of the target's `## Change History` list: `<YYYY-MM-DD>: archived from docsDev/changes/<change-id>/ (<summary>)`.
+   - Use `date -u +%Y-%m-%d` for the Change History date.
    - Apply `ADDED Requirements`, `MODIFIED Requirements`, `REMOVED Requirements`, and `RENAMED Requirements` by exact `### Requirement:` heading names in the target spec.
-7. Run focused sanity checks before committing: `git diff --check -- docsDev/specs docsDev/changes/<change-id>` and a scoped `rg` check confirming the archive destination is not staged yet.
-8. Run `git mv docsDev/changes/<change-id> docsDev/archive/<change-id>`.
-9. Run `git add docsDev/specs docsDev/archive`.
-10. Run `git commit -m "archive <change-id>: <summary>"`.
-11. Report the commit sha and the files created or moved.
+8. Run focused sanity checks before moving: `git diff --check -- docsDev/specs docsDev/changes/<change-id>`.
+9. Derive `<summary>` from the first H1 in `docsDev/changes/<change-id>/spec.md`, stripping a trailing ` Spec`; if no H1 can be parsed, use the change-id.
+10. Run `git mv docsDev/changes/<change-id> docsDev/archive/<change-id>`.
+11. Run `git add docsDev/specs docsDev/archive`.
+12. Run `git diff --cached --name-only -- docsDev/specs docsDev/archive/<change-id>` and confirm both the touched long-term spec target(s) and `docsDev/archive/<change-id>/` paths are staged.
+13. Run `git commit -m "archive <change-id>: <summary>"`.
+14. Report the commit sha and the files created or moved.
 
 If any step after successful precheck and before commit fails, run `git reset --hard HEAD && git clean -fd`, report the failed step, and stop. This destructive rollback is allowed only because precheck requires the working tree to be clean before mutation. If the commit succeeds and a problem is found later, do not auto-retry or reset; the user chooses `git revert <archive-commit>` or a corrective commit.
 
@@ -111,6 +119,7 @@ Expected implementation files:
 
 Expected runtime validation artifacts:
 
+- Create `docsDev/specs/archive/spec.md` by archiving `20260512-archive-precheck` before any later archive of `20260513-archive-skill`.
 - Create `docsDev/specs/triggering/spec.md` during a real archive of `20260512-trigger-convergence`.
 - Move `docsDev/changes/20260512-trigger-convergence/` to `docsDev/archive/20260512-trigger-convergence/` during that same real archive.
 - Keep any transcripts or manual logs under `docsDev/changes/20260513-archive-skill/transcripts/`.
@@ -258,14 +267,20 @@ Implementation validation must include:
 
 - `rg -n "^description:.*Use ONLY.*archive.*change-id" skills/t-archive/SKILL.md`
 - `rg -n "Do NOT auto-trigger|looks good|可以了|tools/t-archive-precheck|git mv docsDev/changes" skills/t-archive/SKILL.md`
+- `tools/t-archive-precheck 20260512-archive-precheck` before the first real archive run; expected exit `0` and JSON metadata for `docsDev/specs/archive/spec.md`.
+- A real explicit archive run for `20260512-archive-precheck`; expected archive commit, `docsDev/specs/archive/spec.md`, and moved change directory.
 - `tools/t-archive-precheck 20260512-trigger-convergence` before the real archive run; expected exit `0` and JSON metadata for `docsDev/specs/triggering/spec.md`.
 - A real explicit archive run for `20260512-trigger-convergence`; expected archive commit and moved change directory.
+- `test -f docsDev/specs/archive/spec.md`
+- `test -d docsDev/archive/20260512-archive-precheck`
+- `test ! -e docsDev/changes/20260512-archive-precheck`
 - `test -f docsDev/specs/triggering/spec.md`
 - `test -d docsDev/archive/20260512-trigger-convergence`
 - `test ! -e docsDev/changes/20260512-trigger-convergence`
+- `rg -n "Archive Precheck Guards Repository Safety|archived from docsDev/changes/20260512-archive-precheck" docsDev/specs/archive/spec.md`
 - `rg -n "T-Superpowers Trigger Boundary|Simple Requests Are Not Forced|archived from docsDev/changes/20260512-trigger-convergence" docsDev/specs/triggering/spec.md`
-- `git log --oneline -1` includes `archive 20260512-trigger-convergence:`
-- `bash tools/t-stage1-check.sh`; if it fails only because already-known dirty instruction files exist, record as blocker rather than this change's failure.
+- `git log --oneline -2` includes `archive 20260512-trigger-convergence:` and `archive 20260512-archive-precheck:`
+- `bash tools/t-stage1-check.sh` must exit `0`; if it does not, stop and fix or mark this change blocked until it can pass.
 
 Manual prompt validation must include:
 
@@ -277,7 +292,7 @@ Manual prompt validation must include:
 
 - Markdown merge remains prompt-driven. Precheck provides deterministic target/action metadata, but Requirement body transforms still require careful review.
 - Rollback uses destructive git commands after mutation. This is acceptable only because precheck enforces a clean worktree first.
-- A real E2E archive moves `20260512-trigger-convergence` out of `docsDev/changes/`; this must happen in its own archive commit after the skill implementation commit.
+- A real E2E archive moves `20260512-archive-precheck` and `20260512-trigger-convergence` out of `docsDev/changes/`; each must happen in its own archive commit after the skill implementation commit.
 - Future upstream rebases may not know about `t-archive`; keep this skill fork-specific and do not copy it into `vendor/superpowers/`.
 
 ## Archive Patch
@@ -285,7 +300,7 @@ Manual prompt validation must include:
 ### archive
 
 Target: docsDev/specs/archive/spec.md
-Action: create
+Action: update
 
 #### ADDED Requirements
 
