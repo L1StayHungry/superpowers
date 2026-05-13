@@ -35,10 +35,10 @@ If the user asks for archive intent without a concrete change-id, ask for the ch
 | Code | Meaning |
 | --- | --- |
 | `1` | Argument, change directory, or spec is missing or invalid |
-| `2` | Archive Patch fields or format are invalid |
-| `3` | Archive Patch Target escapes `docsDev/specs/` |
-| `4` | `docsDev/archive/<change-id>/` already exists |
-| `5` | Working tree is not clean |
+| `2` | Archive Patch 字段缺失或格式错误 |
+| `3` | Target 路径越界 |
+| `4` | archive 目录已存在 |
+| `5` | 工作区不干净 |
 
 ## Process
 
