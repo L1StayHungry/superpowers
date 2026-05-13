@@ -95,10 +95,10 @@ Use `apply_patch`:
 +| Code | Meaning |
 +| --- | --- |
 +| `1` | Argument, change directory, or spec is missing or invalid |
-+| `2` | Archive Patch fields or format are invalid |
-+| `3` | Archive Patch Target escapes `docsDev/specs/` |
-+| `4` | `docsDev/archive/<change-id>/` already exists |
-+| `5` | Working tree is not clean |
++| `2` | Archive Patch 字段缺失或格式错误 |
++| `3` | Target 路径越界 |
++| `4` | archive 目录已存在 |
++| `5` | 工作区不干净 |
 +
 +## Process
 +
@@ -739,3 +739,8 @@ Expected: no output.
 ## Verification Log
 
 Append execution evidence here as tasks run.
+
+- 2026-05-13: Task 1-3 implemented by worker. Commit `278f494 feat: add explicit archive skill` created `skills/t-archive/SKILL.md`.
+- 2026-05-13: Spec review found the exit-code table needed exact Chinese meanings for codes 2-5. Fix commit `edc90c6 fix: clarify archive precheck failure meanings` updated `skills/t-archive/SKILL.md`.
+- 2026-05-13: Validation after fix: `rg -n 'Archive Patch 字段缺失或格式错误|Target 路径越界|archive 目录已存在|工作区不干净' skills/t-archive/SKILL.md` exit `0`; `git diff --check -- skills/t-archive/SKILL.md` exit `0`; `bash tools/t-stage1-check.sh` exit `0`.
+- 2026-05-13: Spec compliance re-review approved Task 1-3. E2E archive and manual prompt validation are still pending explicit archive validation steps.
