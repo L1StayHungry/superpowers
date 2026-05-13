@@ -232,6 +232,7 @@ Report the failed step and stop.
 Run:
 
 ```bash
+mkdir -p docsDev/archive
 git mv "docsDev/changes/<change-id>" "docsDev/archive/<change-id>"
 git add docsDev/specs docsDev/archive
 git diff --cached --name-only -- docsDev/specs "docsDev/archive/<change-id>"
@@ -254,7 +255,57 @@ Report:
 git log --oneline -1
 ```
 
-### Step 9: Failure Handling
+### Step 9: Verify And Record Evidence
+
+After the archive commit succeeds, run:
+
+```bash
+test -d "docsDev/archive/<change-id>"
+test ! -e "docsDev/changes/<change-id>"
+python3 - "${precheck_json}" <<'PY'
+import json
+import subprocess
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+
+for patch in data["archive_patches"]:
+    target = patch["target"]
+    subprocess.run(["test", "-f", target], check=True)
+    subprocess.run(
+        ["rg", "-n", f"archived from docsDev/changes/{data['change_id']}", target],
+        check=True,
+    )
+PY
+git status --short
+```
+
+Expected:
+
+- All commands exit `0`.
+- `git status --short` prints no output.
+
+If this archive is being performed as part of an active plan and that plan file is still under `docsDev/changes/<active-change-id>/plan.md`, append a `## Verification Log` entry or bullet containing:
+
+- precheck stdout JSON
+- derived summary
+- archive commit sha
+- post-archive verification commands and exit results
+
+This evidence update is not part of the archive commit. If you append to an active plan, create a separate docs commit:
+
+```bash
+git add "docsDev/changes/<active-change-id>/plan.md"
+git commit -m "docs: record <change-id> archive evidence"
+git status --short
+```
+
+Expected: `git status --short` prints no output.
+
+If no active plan file is clear, report the same evidence in the final response and do not invent a plan path.
+
+### Step 10: Failure Handling
 
 If any step after a successful precheck mutates files and then fails before commit, run:
 

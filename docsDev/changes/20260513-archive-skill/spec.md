@@ -1,7 +1,7 @@
 ---
 change_id: 20260513-archive-skill
 created_at: 2026-05-13T07:16:01Z
-updated_at: 2026-05-13T07:35:48Z
+updated_at: 2026-05-13T10:05:06Z
 owner: lihuajun
 ---
 
@@ -11,6 +11,7 @@ owner: lihuajun
 
 - 2026-05-13: Initial design for the explicit `t-archive` skill wrapper.
 - 2026-05-13: Changed this change's Archive Patch to update the archive spec after `20260512-archive-precheck` creates it, and tightened archive execution details for target existence checks, commit summary source, UTC dates, staged checks, and stage1-check validation.
+- 2026-05-13: Hardened the archive workflow after the first E2E archive by creating the archive parent directory before `git mv`, adding post-archive verification, and recording archive evidence in the active plan when available.
 
 ## Overview
 
@@ -68,11 +69,17 @@ The skill body should follow this flow:
    - Apply `ADDED Requirements`, `MODIFIED Requirements`, `REMOVED Requirements`, and `RENAMED Requirements` by exact `### Requirement:` heading names in the target spec.
 8. Run focused sanity checks before moving: `git diff --check -- docsDev/specs docsDev/changes/<change-id>`.
 9. Derive `<summary>` from the first H1 in `docsDev/changes/<change-id>/spec.md`, stripping a trailing ` Spec`; if no H1 can be parsed, use the change-id.
-10. Run `git mv docsDev/changes/<change-id> docsDev/archive/<change-id>`.
+10. Run `mkdir -p docsDev/archive`, then `git mv docsDev/changes/<change-id> docsDev/archive/<change-id>`.
 11. Run `git add docsDev/specs docsDev/archive`.
 12. Run `git diff --cached --name-only -- docsDev/specs docsDev/archive/<change-id>` and confirm both the touched long-term spec target(s) and `docsDev/archive/<change-id>/` paths are staged.
 13. Run `git commit -m "archive <change-id>: <summary>"`.
-14. Report the commit sha and the files created or moved.
+14. Verify post-archive state:
+   - `docsDev/archive/<change-id>/` exists
+   - `docsDev/changes/<change-id>/` no longer exists
+   - every Archive Patch target exists and contains `archived from docsDev/changes/<change-id>`
+   - `git status --short` is empty
+15. If an active plan is known and still under `docsDev/changes/<active-change-id>/plan.md`, append precheck stdout, derived summary, archive commit sha, and post-archive verification results to its Verification Log, then commit that evidence in a separate docs commit. If no active plan path is clear, report the same evidence in the final response without inventing a plan path.
+16. Report the commit sha and the files created or moved.
 
 If any step after successful precheck and before commit fails, run `git reset --hard HEAD && git clean -fd`, report the failed step, and stop. This destructive rollback is allowed only because precheck requires the working tree to be clean before mutation. If the commit succeeds and a problem is found later, do not auto-retry or reset; the user chooses `git revert <archive-commit>` or a corrective commit.
 
@@ -364,6 +371,14 @@ The archive workflow must move the completed change to `docsDev/archive/` and co
 - And `docsDev/changes/<change-id>/` must not exist
 - And git log must contain one `archive <change-id>: <summary>` commit
 
+###### Scenario: Archive parent directory is created before move
+
+- Given `docsDev/archive/` does not exist
+- And precheck succeeds
+- When `t-archive` moves the completed change snapshot
+- Then it must create `docsDev/archive/` before `git mv`
+- And the archive must not fail solely because the archive parent directory was missing
+
 ###### Scenario: Failure before commit rolls back
 
 - Given precheck succeeds
@@ -371,3 +386,33 @@ The archive workflow must move the completed change to `docsDev/archive/` and co
 - When `t-archive` handles the failure
 - Then it must reset and clean back to the pre-archive HEAD
 - And it must not retry automatically
+
+##### Requirement: Archive Skill Verifies And Records Successful Archive Evidence
+
+After a successful archive commit, the archive workflow must verify the resulting filesystem state and preserve useful evidence.
+
+###### Scenario: Post-archive verification passes
+
+- Given the archive commit was created
+- When `t-archive` verifies the result
+- Then `docsDev/archive/<change-id>/` must exist
+- And `docsDev/changes/<change-id>/` must not exist
+- And every Archive Patch target must exist
+- And every Archive Patch target must contain `archived from docsDev/changes/<change-id>`
+- And `git status --short` must be empty
+
+###### Scenario: Active plan receives archive evidence
+
+- Given the archive was run while executing an active plan under `docsDev/changes/<active-change-id>/plan.md`
+- And that plan file still exists after the archive commit
+- When `t-archive` records evidence
+- Then it must append the precheck stdout JSON, derived summary, archive commit sha, and post-archive verification results to that plan's Verification Log
+- And it must commit that evidence in a separate docs commit after the archive commit
+- And `git status --short` must be empty after the evidence commit
+
+###### Scenario: No active plan path is clear
+
+- Given no active plan file can be identified safely
+- When `t-archive` finishes successfully
+- Then it must report the same evidence in the final response
+- And it must not invent or create a plan path
