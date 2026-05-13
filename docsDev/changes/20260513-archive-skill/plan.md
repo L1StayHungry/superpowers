@@ -26,6 +26,7 @@ owner: lihuajun
 - `docsDev/specs/triggering/spec.md`: created during E2E archive of `20260512-trigger-convergence`.
 - `docsDev/archive/20260512-archive-precheck/`: created by E2E archive.
 - `docsDev/archive/20260512-trigger-convergence/`: created by E2E archive.
+- `docsDev/changes/20260513-archive-skill/transcripts/`: manual prompt validation transcripts.
 
 Do not modify:
 
@@ -40,6 +41,7 @@ Do not modify:
 
 - Work from repository root: `/Users/lihuajun/WorkProject/superpowers`.
 - Start with `git status --short` empty.
+- `docsDev/changes/20260513-archive-skill/spec.md` and this plan must already be committed before Task 1 starts. If either file is dirty later, include it in the implementation commit before any E2E archive task runs.
 - Do not treat plan execution as archive authorization. The E2E archive tasks require the user to explicitly say the exact archive command for each target change-id.
 - Keep the Chinese trigger examples in the skill description exactly enough for runtime matching: `走 t-archive`, `把 ... 沉淀到 specs`, and `可以了`.
 - Do not introduce transaction backup directories, checksums, atomic rename, `archive_failure`, status frontmatter, acceptance evidence, `tools/t-validate`, or `tools/t-state`.
@@ -222,17 +224,17 @@ Use `apply_patch`:
 +- Archive Patch starts at `## Archive Patch` and must be terminal.
 +- Capability section starts at `### <capability>` and ends before the next `### ` capability heading or end of file.
 +- Long-term spec Requirement block starts at exact `### Requirement: <name>`.
-+- A long-term spec Requirement block ends before the next heading at level 1, 2, or 3.
++- A long-term spec Requirement block ends before the next heading at level 1, 2, or 3. If no such heading exists, the block ends at EOF.
 +- Archive Patch Requirement headings are normalized when copied:
 +  - `##### Requirement:` becomes `### Requirement:`
 +  - `###### Scenario:` becomes `#### Scenario:`
 +
 +Action rules:
 +
-+- `ADDED Requirements`: append normalized Requirement blocks under `## Requirements`.
-+- `MODIFIED Requirements`: find the exact existing `### Requirement: <name>` block and replace it with the normalized `Replace with:` body.
-+- `REMOVED Requirements`: delete the exact existing `### Requirement: <name>` block named by `- Requirement: <name>`.
-+- `RENAMED Requirements`: rename only the exact existing heading from `### Requirement: <old>` to `### Requirement: <new>`.
++- `ADDED Requirements`: append normalized Requirement blocks at the end of the `## Requirements` section, before the next `## ` heading or EOF.
++- `MODIFIED Requirements`: find the exact existing `### Requirement: <name>` block and replace it with the normalized body after `Replace with:`. Do not copy the `Replace with:` line into the long-term spec.
++- `REMOVED Requirements`: delete the exact existing `### Requirement: <name>` block named by `- Requirement: <name>`. Ignore `- Reason:` lines; they are Archive Patch rationale only.
++- `RENAMED Requirements`: parse `- From: <old>` and `- To: <new>` from the same renamed item, then rename only the exact `### Requirement: <old>` heading line to `### Requirement: <new>`. Keep the block body and scenarios unchanged. Ignore `- Reason:` lines.
 +
 +Change History rule:
 +
@@ -388,6 +390,18 @@ Expected: exit `0`.
 **Files:**
 - Stage: `skills/t-archive/SKILL.md`
 
+- [ ] **Step 0: Confirm plan and spec are committed or included**
+
+Run:
+
+```bash
+git status --short -- docsDev/changes/20260513-archive-skill/spec.md docsDev/changes/20260513-archive-skill/plan.md
+```
+
+Expected: no output.
+
+If either `spec.md` or `plan.md` appears, stage it together with `skills/t-archive/SKILL.md` in Step 3. Do not start Task 4 or Task 5 while these files are dirty, because `tools/t-archive-precheck` will exit `5`.
+
 - [ ] **Step 1: Run whitespace validation**
 
 Run:
@@ -413,8 +427,89 @@ Expected: exit `0`. If it fails, stop and fix or mark this change blocked; do no
 Run:
 
 ```bash
-git add skills/t-archive/SKILL.md
+git add skills/t-archive/SKILL.md docsDev/changes/20260513-archive-skill/spec.md docsDev/changes/20260513-archive-skill/plan.md
 git commit -m "feat: add explicit archive skill"
+```
+
+Expected: commit succeeds.
+
+### Task 3.5: Manual Prompt Validation
+
+**Files:**
+- Create: `docsDev/changes/20260513-archive-skill/transcripts/archive-skill-manual-prompts.md`
+
+- [ ] **Step 1: Create transcript directory**
+
+Run:
+
+```bash
+mkdir -p docsDev/changes/20260513-archive-skill/transcripts
+```
+
+Expected: exit `0`.
+
+- [ ] **Step 2: Validate vague approval does not archive**
+
+Feed these prompts to the agent or local runtime harness one at a time:
+
+```text
+可以了
+looks good
+ok
+```
+
+Expected:
+
+- The agent does not invoke `t-archive`.
+- The agent does not run `tools/t-archive-precheck`.
+- The agent does not create an archive commit.
+- The agent explains that archive requires explicit archive intent and a concrete change-id if archive is discussed.
+
+Append the observed transcript and conclusion to:
+
+```text
+docsDev/changes/20260513-archive-skill/transcripts/archive-skill-manual-prompts.md
+```
+
+- [ ] **Step 3: Validate archive intent without change-id asks and stops**
+
+Feed:
+
+```text
+走 t-archive
+```
+
+Expected:
+
+- The agent asks for the concrete `YYYYMMDD-<slug>` change-id.
+- The agent does not run `tools/t-archive-precheck`.
+- The agent does not modify files.
+
+Append the observed transcript and conclusion to `archive-skill-manual-prompts.md`.
+
+- [ ] **Step 4: Validate explicit archive request enters t-archive without mutating yet**
+
+Feed:
+
+```text
+归档 20260512-archive-precheck
+```
+
+Expected:
+
+- The agent recognizes explicit archive intent for `20260512-archive-precheck`.
+- The agent enters the `t-archive` flow.
+- For this manual prompt validation task, stop before mutation and leave the real precheck plus archive run to Task 4.
+
+Append the observed transcript and conclusion to `archive-skill-manual-prompts.md`.
+
+- [ ] **Step 5: Commit manual prompt transcript**
+
+Run:
+
+```bash
+git add docsDev/changes/20260513-archive-skill/transcripts/archive-skill-manual-prompts.md
+git commit -m "docs: record archive skill prompt validation"
 ```
 
 Expected: commit succeeds.
@@ -452,6 +547,21 @@ Expected stdout:
 
 Expected exit: `0`.
 
+- [ ] **Step 2.5: Record actual Archive Patch Requirement names**
+
+Run:
+
+```bash
+archive_precheck_requirements="$(
+  rg -o "^##### Requirement: .+" docsDev/changes/20260512-archive-precheck/spec.md \
+    | sed 's/^##### Requirement: //' \
+    | paste -sd '|'
+)"
+printf '%s\n' "${archive_precheck_requirements}"
+```
+
+Expected: exit `0`. Use the printed Requirement names for Step 4 validation instead of guessing.
+
 - [ ] **Step 3: Execute `t-archive` process for `20260512-archive-precheck`**
 
 Use `skills/t-archive/SKILL.md` exactly as written:
@@ -461,10 +571,12 @@ Use `skills/t-archive/SKILL.md` exactly as written:
 - Add Change History entry using `date -u +%Y-%m-%d`.
 - Move the change directory with `git mv`.
 - Stage specs and archive together.
+- Derive `<summary>` using `skills/t-archive/SKILL.md` Step 4.
+- Append the derived summary to the Verification Log in this plan.
 - Commit with:
 
 ```bash
-git commit -m "archive 20260512-archive-precheck: Archive Precheck"
+git commit -m "archive 20260512-archive-precheck: ${derived_summary}"
 ```
 
 - [ ] **Step 4: Verify archive precheck E2E result**
@@ -475,7 +587,7 @@ Run:
 test -f docsDev/specs/archive/spec.md
 test -d docsDev/archive/20260512-archive-precheck
 test ! -e docsDev/changes/20260512-archive-precheck
-rg -n "Archive Precheck Guards Repository Safety|archived from docsDev/changes/20260512-archive-precheck" docsDev/specs/archive/spec.md
+rg -n "${archive_precheck_requirements}|archived from docsDev/changes/20260512-archive-precheck" docsDev/specs/archive/spec.md
 git log --oneline -1
 ```
 
@@ -518,6 +630,21 @@ Expected stdout:
 
 Expected exit: `0`.
 
+- [ ] **Step 2.5: Record actual Archive Patch Requirement names**
+
+Run:
+
+```bash
+trigger_convergence_requirements="$(
+  rg -o "^##### Requirement: .+" docsDev/changes/20260512-trigger-convergence/spec.md \
+    | sed 's/^##### Requirement: //' \
+    | paste -sd '|'
+)"
+printf '%s\n' "${trigger_convergence_requirements}"
+```
+
+Expected: exit `0`. Use the printed Requirement names for Step 4 validation instead of guessing.
+
 - [ ] **Step 3: Execute `t-archive` process for `20260512-trigger-convergence`**
 
 Use `skills/t-archive/SKILL.md` exactly as written:
@@ -527,10 +654,12 @@ Use `skills/t-archive/SKILL.md` exactly as written:
 - Add Change History entry using `date -u +%Y-%m-%d`.
 - Move the change directory with `git mv`.
 - Stage specs and archive together.
+- Derive `<summary>` using `skills/t-archive/SKILL.md` Step 4.
+- Append the derived summary to the Verification Log in this plan.
 - Commit with:
 
 ```bash
-git commit -m "archive 20260512-trigger-convergence: Trigger Convergence"
+git commit -m "archive 20260512-trigger-convergence: ${derived_summary}"
 ```
 
 - [ ] **Step 4: Verify trigger convergence E2E result**
@@ -541,7 +670,7 @@ Run:
 test -f docsDev/specs/triggering/spec.md
 test -d docsDev/archive/20260512-trigger-convergence
 test ! -e docsDev/changes/20260512-trigger-convergence
-rg -n "T-Superpowers Trigger Boundary|Simple Requests Are Not Forced|archived from docsDev/changes/20260512-trigger-convergence" docsDev/specs/triggering/spec.md
+rg -n "${trigger_convergence_requirements}|archived from docsDev/changes/20260512-trigger-convergence" docsDev/specs/triggering/spec.md
 git log --oneline -1
 ```
 
