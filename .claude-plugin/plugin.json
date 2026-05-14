@@ -1,6 +1,6 @@
 {
   "name": "t-superpowers",
-  "description": "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques",
+  "description": "Internal t-superpowers fork for Claude Code complex development workflows: planning, TDD, debugging, review, and archive discipline while simple edits stay direct.",
   "version": "5.1.0",
   "author": {
     "name": "Jesse Vincent",

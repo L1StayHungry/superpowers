@@ -1,6 +1,6 @@
 {
   "name": "t-superpowers-dev",
-  "description": "Development marketplace for Superpowers core skills library",
+  "description": "Development marketplace for the internal t-superpowers fork.",
   "owner": {
     "name": "Jesse Vincent",
     "email": "jesse@fsck.com"
@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "t-superpowers",
-      "description": "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques",
+      "description": "Internal t-superpowers fork for complex development workflows: planning, TDD, debugging, review, and archive discipline while simple edits stay direct.",
       "version": "5.1.0",
       "source": "./",
       "author": {
