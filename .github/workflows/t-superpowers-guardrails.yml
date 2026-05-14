@@ -1,0 +1,43 @@
+name: t-superpowers guardrails
+
+on:
+  pull_request:
+  push:
+    branches:
+      - t-dev
+      - main
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage 1 namespace check
+        run: bash tools/t-stage1-check.sh
+
+      - name: Stage 2 live surface guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          live_paths=(
+            skills
+            hooks
+            .claude-plugin
+            .cursor-plugin
+            .codex-plugin
+            README.md
+            docsDev/getting-started.md
+          )
+
+          if rg -n 'docs/superpowers/(specs|plans)' "${live_paths[@]}"; then
+            echo "FAIL: live surfaces must not instruct new runtime artifacts under docs/superpowers/specs or docs/superpowers/plans"
+            exit 1
+          fi
+
+          if rg -n '(^|[^t-])superpowers:(brainstorming|dispatching-parallel-agents|executing-plans|finishing-a-development-branch|receiving-code-review|requesting-code-review|subagent-driven-development|systematic-debugging|test-driven-development|using-git-worktrees|using-superpowers|verification-before-completion|writing-plans|writing-skills|archive)' "${live_paths[@]}"; then
+            echo "FAIL: live surfaces must use t-superpowers:t-* runtime references"
+            exit 1
+          fi
