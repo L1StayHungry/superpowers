@@ -1,3 +1,15 @@
+# t-superpowers
+
+`t-superpowers` is an internal fork of [`obra/superpowers`](https://github.com/obra/superpowers) for team development workflows.
+
+Start with the team guide: [docsDev/getting-started.md](docsDev/getting-started.md).
+
+For normal team work, enable either official `superpowers` or internal `t-superpowers`, not both. Simple edits, Q&A, and code reading should stay in ordinary agent mode. Use `t-superpowers` for complex multi-file features, behavior changes, root-cause-unknown bugs, and changes that need specs, plans, verification, or archive records.
+
+## Upstream README Reference
+
+The remainder of this README is upstream-oriented reference text retained during the fork rollout.
+
 # Superpowers
 
 Superpowers is a complete software development methodology for your coding agents, built on top of a set of composable skills and some initial instructions that make sure your agent uses them.
