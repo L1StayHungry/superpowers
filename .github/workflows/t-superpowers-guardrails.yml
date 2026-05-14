@@ -1,6 +1,6 @@
 name: t-superpowers guardrails
 
-on:
+'on':
   pull_request:
   push:
     branches:
@@ -13,6 +13,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
 
       - name: Stage 1 namespace check
         run: bash tools/t-stage1-check.sh
@@ -32,12 +35,25 @@ jobs:
             docsDev/getting-started.md
           )
 
-          if rg -n 'docs/superpowers/(specs|plans)' "${live_paths[@]}"; then
-            echo "FAIL: live surfaces must not instruct new runtime artifacts under docs/superpowers/specs or docs/superpowers/plans"
-            exit 1
-          fi
+          check_no_matches() {
+            local pattern="$1"
+            local message="$2"
+            set +e
+            rg -n "$pattern" "${live_paths[@]}"
+            local rg_status=$?
+            set -e
+            if [ "$rg_status" -eq 0 ]; then
+              echo "$message"
+              exit 1
+            fi
+            if [ "$rg_status" -ne 1 ]; then
+              echo "FAIL: rg search failed for pattern: $pattern"
+              exit "$rg_status"
+            fi
+          }
 
-          if rg -n '(^|[^t-])superpowers:(brainstorming|dispatching-parallel-agents|executing-plans|finishing-a-development-branch|receiving-code-review|requesting-code-review|subagent-driven-development|systematic-debugging|test-driven-development|using-git-worktrees|using-superpowers|verification-before-completion|writing-plans|writing-skills|archive)' "${live_paths[@]}"; then
-            echo "FAIL: live surfaces must use t-superpowers:t-* runtime references"
-            exit 1
-          fi
+          check_no_matches 'docs/superpowers/(specs|plans)' \
+            'FAIL: live surfaces must not instruct new runtime artifacts under docs/superpowers/specs or docs/superpowers/plans'
+
+          check_no_matches '(^|[^t-])superpowers:(brainstorming|dispatching-parallel-agents|executing-plans|finishing-a-development-branch|receiving-code-review|requesting-code-review|subagent-driven-development|systematic-debugging|test-driven-development|using-git-worktrees|using-superpowers|verification-before-completion|writing-plans|writing-skills|archive)' \
+            'FAIL: live surfaces must use t-superpowers:t-* runtime references'
