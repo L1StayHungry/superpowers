@@ -560,3 +560,16 @@ Expected: no output.
 - Scope control: Cursor.app and Codex App manual smoke remain follow-up validation after landing surfaces are fixed. Historical tests with upstream paths are not migrated in this patch.
 - Forbidden design check: The plan does not add state fields, `acceptance_evidence`, conversation hashes, PR online checks, transaction backups, `tools/t-validate`, or `tools/t-state`.
 - Type and path consistency: All changed file paths match the approved spec. Runtime artifacts remain under `docsDev/changes/20260514-landing-hardening/`.
+
+## Verification Log
+
+UTC timestamp: `2026-05-14T12:15:27Z`.
+
+- `git diff --check -- .codex-plugin/plugin.json .cursor-plugin/plugin.json .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/session-start README.md docsDev/getting-started.md .github/workflows/t-superpowers-guardrails.yml docsDev/changes/20260514-landing-hardening/plan.md`: exit code `0`; scoped files had no whitespace errors.
+- `bash tools/t-stage1-check.sh`: exit code `0`; Stage 1 namespace migration self-check passed.
+- JSON manifest validation group (`python3 -m json.tool` for `.codex-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`): exit code `0`; all plugin manifest files parsed as valid JSON.
+- `bash -n hooks/session-start`: exit code `0`; session-start hook syntax is valid.
+- `ruby -e 'require "yaml"; YAML.load_file(ARGV[0]); puts "OK: yaml parsed"' .github/workflows/t-superpowers-guardrails.yml`: exit code `0`; guardrail workflow YAML parsed successfully.
+- Codex default prompt assertion group (`python3 - <<'PY' ...`): exit code `0`; old upstream default prompts are absent and all Codex default prompts are scoped and short.
+- `rg -n "docsDev/changes/<change-id>/spec.md|docsDev/changes/<change-id>/plan.md|docsDev/specs/<capability>/spec.md|docsDev/archive/<change-id>" docsDev/getting-started.md`: exit code `0`; onboarding guide contains the expected artifact path lines.
+- Forbidden design scan group (`rg` for `allow_implicit_invocation: false` outside vendor, then `find`/`rg` for `tools/t-validate` and `tools/t-state`): exit code `0`; no forbidden implicit-invocation override or forbidden validation/state tool was found.
