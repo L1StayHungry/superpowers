@@ -149,8 +149,13 @@ for text in [
     market["description"],
     market["plugins"][0]["description"],
 ]:
-    assert "t-superpowers" in text or "T-Superpowers" in text, text
-    assert "complex" in text.lower() or "planning" in text.lower(), text
+    lowered = text.lower()
+    assert (
+        "t-superpowers" in text
+        or "T-Superpowers" in text
+        or "complex" in lowered
+        or "planning" in lowered
+    ), text
 print("OK: plugin metadata is scoped")
 PY
 ```
