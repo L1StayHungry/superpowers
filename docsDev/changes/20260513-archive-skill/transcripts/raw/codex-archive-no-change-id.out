@@ -1,0 +1,4 @@
+我在使用 `t-archive` skill 来归档变更。
+
+现在还缺一个必须参数：请给出要归档的 `change-id`（格式 `YYYYMMDD-<slug>`，例如 `20260508-add-billing-export`）。  
+你回复一个类似 `archive 20260508-add-billing-export` / `归档 20260508-add-billing-export` 我就继续。
