@@ -171,6 +171,48 @@ test('doctor returns UNKNOWN when marketplace and plugin exist without version d
   }
 });
 
+test('doctor returns UNKNOWN when matching plugin lacks marketplace association', async () => {
+  const binDir = tempDir('tsp-claude-bin-');
+  const payloadRoot = buildDistPayloadCopy('tsp-claude-payload-');
+  const version = readJson(path.join(payloadRoot, '.claude-plugin/plugin.json')).version;
+  makeClaudeStub({
+    binDir,
+    marketplaceList: [{ name: 't-superpowers-internal' }],
+    pluginList: [{ name: 't-superpowers', version }]
+  });
+
+  try {
+    const result = await doctorClaude({ env: envWithStub(binDir), payloadRoot });
+
+    assert.equal(result.status, 'UNKNOWN');
+    assert.match(result.message, /marketplace/i);
+  } finally {
+    cleanup(binDir);
+    cleanup(payloadRoot);
+  }
+});
+
+test('doctor returns FAIL when matching plugin belongs to dev marketplace', async () => {
+  const binDir = tempDir('tsp-claude-bin-');
+  const payloadRoot = buildDistPayloadCopy('tsp-claude-payload-');
+  const version = readJson(path.join(payloadRoot, '.claude-plugin/plugin.json')).version;
+  makeClaudeStub({
+    binDir,
+    marketplaceList: [{ name: 't-superpowers-internal' }],
+    pluginList: [{ name: 't-superpowers', marketplace: 't-superpowers-dev', version }]
+  });
+
+  try {
+    const result = await doctorClaude({ env: envWithStub(binDir), payloadRoot });
+
+    assert.equal(result.status, 'FAIL');
+    assert.match(result.message, /t-superpowers-dev/);
+  } finally {
+    cleanup(binDir);
+    cleanup(payloadRoot);
+  }
+});
+
 test('doctor returns FAIL when marketplace or plugin is missing', async () => {
   const binDir = tempDir('tsp-claude-bin-');
   const payloadRoot = buildDistPayloadCopy('tsp-claude-payload-');
@@ -206,7 +248,7 @@ test('doctor returns FAIL when claude binary is missing', async () => {
   }
 });
 
-test('doctor returns PASS when version data matches payload plugin version', async () => {
+test('doctor returns PASS when version data and marketplace association match', async () => {
   const binDir = tempDir('tsp-claude-bin-');
   const payloadRoot = buildDistPayloadCopy('tsp-claude-payload-');
   const version = readJson(path.join(payloadRoot, '.claude-plugin/plugin.json')).version;
