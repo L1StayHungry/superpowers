@@ -36,3 +36,14 @@ test('unknown target exits non-zero with useful error', async () => {
   assert.equal(code, 2);
   assert.match(errors.join('\n'), /unknown target: vscode/);
 });
+
+test('extra positional arguments exit non-zero with useful error', async () => {
+  const errors = [];
+  const code = await runCli(['install', 'cursor', 'extra'], {
+    stdout: () => {},
+    stderr: (line) => errors.push(line)
+  });
+
+  assert.equal(code, 2);
+  assert.match(errors.join('\n'), /too many positional arguments/);
+});
