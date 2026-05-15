@@ -182,7 +182,7 @@ Default target:
 Behavior:
 
 - If the target does not exist, copy into a temporary sibling directory and rename into place.
-- If the target is a symlink, remove only the symlink, not its destination, and require `--adopt` unless a receipt proves it was installer-managed.
+- If the target is a symlink, remove only the symlink, not its destination, and always require `--adopt`; receipt checks must not follow a top-level symlink to prove ownership.
 - If the target has a receipt from `@4399/tdata-t-superpowers`, replace it with the current package payload.
 - If the target has `.cursor-plugin/plugin.json` with `name: "t-superpowers"` but no receipt, require `--adopt`.
 - If the target belongs to another plugin, fail.
