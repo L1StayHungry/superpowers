@@ -121,3 +121,44 @@ Date: 2026-05-15
   - stage 1 check: 0
   - old-path grep: 1
 - Observation: npm installer suite passed 67/67. Stage 1 guardrail printed `OK: Stage 1 migration self-check passed`. Old-path grep returned no matches, so exit 1 is expected for the grep command.
+
+## 5.1.1 Release Preparation
+
+- Result: PASS
+- Date: 2026-05-15
+- Version: `5.1.1`
+- Reason: publish the updated npm README generated from `docsDev/t-superpowers-installer.md`; runtime CLI behavior is unchanged.
+- Commands:
+  - `node tools/sync-versions.mjs --set 5.1.1`
+  - `node tools/sync-versions.mjs --check`
+  - `npm run test:npm-installer -- --test-reporter=spec`
+  - `npm run build`
+  - `npm run pack:dry-run`
+  - `git diff --check`
+  - `npm pack ./dist/npm-package`
+  - `npm publish ./dist/npm-package --registry https://registry-npm.gz4399.com/ --dry-run`
+  - `npm view @4399/tdata-t-superpowers@5.1.1 version --registry https://registry-npm.gz4399.com/`
+- Exit code:
+  - version sync: 0
+  - npm installer tests: 0
+  - build: 0
+  - pack dry-run: 0
+  - git diff check: 0
+  - npm pack: 0
+  - publish dry-run: 0
+  - version lookup: 1
+- Observation: version fields synchronized at `5.1.1`. Installer suite passed 67/67. Dry-run tarball was `@4399/tdata-t-superpowers@5.1.1`, filename `4399-tdata-t-superpowers-5.1.1.tgz`, 72 files, package size 156.6 kB; `.claude-plugin/plugin.json` was present, `.claude-plugin/marketplace.json` was absent, and `.agents/skills/` was not packaged. Publish dry-run reported `+ @4399/tdata-t-superpowers@5.1.1`. Version lookup returned `E404`, so this version was not visible in the internal registry before publish.
+- Stage 1 note: pre-commit version changes intentionally touch root `package.json`, which the guardrail rejects while dirty. After release commit `e81cae4`, `bash tools/t-stage1-check.sh` exited `0` and printed `OK: Stage 1 migration self-check passed`.
+
+## 5.1.1 Tarball Install Smoke
+
+- Result: PASS
+- Command:
+  - `npm install /Users/lihuajun/WorkProject/superpowers/4399-tdata-t-superpowers-5.1.1.tgz` inside a temporary npm project
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers install cursor --json`
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers doctor cursor --json`
+  - `CODEX_HOME=<tmp> node_modules/.bin/tdata-t-superpowers install codex --json`
+  - `CODEX_HOME=<tmp> node_modules/.bin/tdata-t-superpowers doctor codex --json`
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers install claude --dry-run --json`
+- Exit code: 0
+- Observation: installed package metadata was `@4399/tdata-t-superpowers@5.1.1`. Cursor doctor returned `PASS`, installed a physical directory, and found 15 `t-*` skill directories. Codex doctor returned the expected `WARN` and found 15 managed skill directories. Claude dry-run returned `PASS`.

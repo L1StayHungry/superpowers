@@ -9,7 +9,7 @@
     {
       "name": "t-superpowers",
       "description": "Internal t-superpowers fork for complex development workflows: planning, TDD, debugging, review, and archive discipline while simple edits stay direct.",
-      "version": "5.1.0",
+      "version": "5.1.1",
       "source": "./",
       "author": {
         "name": "Jesse Vincent",

@@ -1,6 +1,6 @@
 {
   "name": "t-superpowers",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "Internal t-superpowers fork for complex development workflows: planning, TDD, debugging, review, and archive discipline while simple edits stay in normal agent mode.",
   "author": {
     "name": "Jesse Vincent",
