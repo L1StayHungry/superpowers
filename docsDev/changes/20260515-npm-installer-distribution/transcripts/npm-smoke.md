@@ -16,6 +16,21 @@ Date: 2026-05-15
 - Exit code: 0
 - Observation: dry-run tarball was `@4399/tdata-t-superpowers@5.1.0`, filename `4399-tdata-t-superpowers-5.1.0.tgz`, 72 files, package size 151.3 kB. Tarball contents included `.claude-plugin/plugin.json` and did not include `.claude-plugin/marketplace.json`.
 
+## Tarball Install Smoke
+
+- Result: PASS
+- Command:
+  - `npm pack ./dist/npm-package`
+  - `npm install /Users/lihuajun/WorkProject/superpowers/4399-tdata-t-superpowers-5.1.0.tgz` inside a temporary npm project
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers install cursor --json`
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers doctor cursor --json`
+  - `CODEX_HOME=<tmp> node_modules/.bin/tdata-t-superpowers install codex --json`
+  - `CODEX_HOME=<tmp> node_modules/.bin/tdata-t-superpowers doctor codex --json`
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers install claude --dry-run --json`
+- Exit code: 0
+- Observation: Cursor doctor returned `PASS`, installed a physical directory, and found 15 `t-*` skill directories. Codex doctor returned the expected `WARN` and found 15 managed skill directories. Claude dry-run returned `PASS` and reported the generated internal marketplace path without writing real user config.
+- Published registry package: NOT RUN. This verifies the generated tarball, not `npx @4399/tdata-t-superpowers@latest`.
+
 ## Cursor
 
 - Result: PASS
