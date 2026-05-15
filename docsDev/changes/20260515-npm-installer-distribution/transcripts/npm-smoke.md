@@ -162,3 +162,26 @@ Date: 2026-05-15
   - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers install claude --dry-run --json`
 - Exit code: 0
 - Observation: installed package metadata was `@4399/tdata-t-superpowers@5.1.1`. Cursor doctor returned `PASS`, installed a physical directory, and found 15 `t-*` skill directories. Codex doctor returned the expected `WARN` and found 15 managed skill directories. Claude dry-run returned `PASS`.
+
+## 5.1.1 Internal Registry Publish
+
+- Result: PASS
+- Command:
+  - `npm publish ./dist/npm-package --registry https://registry-npm.gz4399.com/`
+  - `npm view @4399/tdata-t-superpowers@5.1.1 version --registry https://registry-npm.gz4399.com/`
+  - `npm dist-tag ls @4399/tdata-t-superpowers --registry https://registry-npm.gz4399.com/`
+- Exit code: 0
+- Observation: publish reported `+ @4399/tdata-t-superpowers@5.1.1`. Version lookup returned `5.1.1`. Dist tag lookup returned `latest: 5.1.1`.
+
+## 5.1.1 Internal Registry Install Smoke
+
+- Result: PASS
+- Command:
+  - `npm install @4399/tdata-t-superpowers@5.1.1 --registry https://registry-npm.gz4399.com/` inside a temporary npm project
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers install cursor --json`
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers doctor cursor --json`
+  - `CODEX_HOME=<tmp> node_modules/.bin/tdata-t-superpowers install codex --json`
+  - `CODEX_HOME=<tmp> node_modules/.bin/tdata-t-superpowers doctor codex --json`
+  - `HOME=<tmp> node_modules/.bin/tdata-t-superpowers install claude --dry-run --json`
+- Exit code: 0
+- Observation: installed package metadata was `@4399/tdata-t-superpowers@5.1.1` with bin `tdata-t-superpowers`. Cursor doctor returned `PASS`, installed a physical directory, found 15 `t-*` skill directories, and the target was not a symlink. Codex doctor returned the expected `WARN` and found 15 managed skill directories. Claude dry-run returned `PASS`.
