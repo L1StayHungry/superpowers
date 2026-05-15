@@ -1,9 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { runCli } from '../../lib/cli.mjs';
 import { installCodex } from '../../lib/targets/codex.mjs';
 import { installCursor } from '../../lib/targets/cursor.mjs';
 import { buildDistPayloadCopy, cleanup, tempDir } from './helpers.mjs';
+
+function makeClaudeStub(binDir) {
+  const logFile = path.join(binDir, 'claude.log');
+  mkdirSync(binDir, { recursive: true });
+  writeFileSync(
+    path.join(binDir, 'claude'),
+    `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(logFile)}, args.join(' ') + '\\n');
+if (args.join(' ') === 'plugin marketplace list --json') {
+  console.log(JSON.stringify([{ name: 't-superpowers-internal' }]));
+  process.exit(0);
+}
+if (args.join(' ') === 'plugin list --json') {
+  console.log(JSON.stringify([{ name: 't-superpowers', marketplace: 't-superpowers-internal' }]));
+  process.exit(0);
+}
+process.exit(0);
+`,
+    { mode: 0o755 }
+  );
+  return logFile;
+}
 
 test('help lists supported commands and targets', async () => {
   const writes = [];
@@ -51,18 +77,22 @@ test('extra positional arguments exit non-zero with useful error', async () => {
   assert.match(errors.join('\n'), /too many positional arguments/);
 });
 
-test('doctor all --json treats unimplemented claude target as non-success', async () => {
+test('doctor all --json includes implemented claude target using native doctor', async () => {
   const home = tempDir('tsp-cli-doctor-all-');
   const codexHome = tempDir('tsp-cli-doctor-all-codex-');
+  const binDir = tempDir('tsp-cli-doctor-all-bin-');
   const payloadRoot = buildDistPayloadCopy('tsp-cli-payload-');
   const originalHome = process.env.HOME;
   const originalCodexHome = process.env.CODEX_HOME;
+  const originalPath = process.env.PATH;
   const writes = [];
   try {
+    const logFile = makeClaudeStub(binDir);
     await installCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false });
     await installCodex({ payloadRoot, codexHome, adopt: false, force: false, dryRun: false });
     process.env.HOME = home;
     process.env.CODEX_HOME = codexHome;
+    process.env.PATH = `${binDir}${path.delimiter}${originalPath || ''}`;
     const code = await runCli(['doctor', 'all', '--json'], {
       stdout: (line) => writes.push(line),
       stderr: () => {}
@@ -73,12 +103,18 @@ test('doctor all --json treats unimplemented claude target as non-success', asyn
     assert.equal(output.find((result) => result.target === 'cursor')?.status, 'PASS');
     assert.equal(output.find((result) => result.target === 'codex')?.status, 'WARN');
     assert.equal(output.find((result) => result.target === 'claude')?.status, 'UNKNOWN');
+    assert.deepEqual(readFileSync(logFile, 'utf8').trim().split('\n'), [
+      'plugin marketplace list --json',
+      'plugin list --json'
+    ]);
   } finally {
     process.env.HOME = originalHome;
     if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
     else process.env.CODEX_HOME = originalCodexHome;
+    process.env.PATH = originalPath;
     cleanup(home);
     cleanup(codexHome);
+    cleanup(binDir);
     cleanup(payloadRoot);
   }
 });
