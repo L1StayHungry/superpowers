@@ -1,22 +1,15 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { cpSync, existsSync, lstatSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tempDir, cleanup, readJson, runNode, withDistBuildLock, writeJson } from './helpers.mjs';
+import { existsSync, lstatSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { buildDistPayloadCopy, tempDir, cleanup, readJson, writeJson } from './helpers.mjs';
 import { runCli } from '../../lib/cli.mjs';
 import { cursorTarget, doctorCursor, installCursor, uninstallCursor } from '../../lib/targets/cursor.mjs';
 
 let payloadRoot;
 
 before(() => {
-  payloadRoot = tempDir('tsp-cursor-payload-');
-  withDistBuildLock(() => {
-    const distRoot = path.resolve('dist/npm-package');
-    rmSync(distRoot, { recursive: true, force: true });
-    const result = runNode(['scripts/build-npm-package.mjs'], { cwd: path.resolve('.') });
-    assert.equal(result.status, 0, result.stderr);
-    cpSync(distRoot, payloadRoot, { recursive: true, dereference: false });
-  });
+  payloadRoot = buildDistPayloadCopy('tsp-cursor-payload-');
 });
 
 after(() => {
@@ -81,6 +74,28 @@ test('cursor install refuses existing symlink without adopt', async () => {
   } finally {
     cleanup(home);
     cleanup(external);
+  }
+});
+
+test('cursor install refuses managed symlink without adopt and leaves symlink intact', async () => {
+  const home = tempDir('tsp-cursor-managed-symlink-');
+  const managedHome = tempDir('tsp-cursor-managed-target-');
+  try {
+    await installCursor({ payloadRoot, home: managedHome, adopt: false, force: false, dryRun: false });
+    const target = cursorTarget(home);
+    const managedTarget = cursorTarget(managedHome);
+    mkdirSync(path.dirname(target), { recursive: true });
+    symlinkSync(managedTarget, target);
+
+    await assert.rejects(
+      installCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false }),
+      /requires --adopt/
+    );
+    assert.equal(lstatSync(target).isSymbolicLink(), true);
+    assert.equal(existsSync(managedTarget), true);
+  } finally {
+    cleanup(home);
+    cleanup(managedHome);
   }
 });
 
@@ -151,6 +166,25 @@ test('dangling cursor symlink requires adopt and is reported as symlink', async 
   }
 });
 
+test('cursor uninstall refuses managed symlink without adopt and leaves symlink intact', async () => {
+  const home = tempDir('tsp-cursor-uninstall-managed-symlink-');
+  const managedHome = tempDir('tsp-cursor-uninstall-managed-target-');
+  try {
+    await installCursor({ payloadRoot, home: managedHome, adopt: false, force: false, dryRun: false });
+    const target = cursorTarget(home);
+    const managedTarget = cursorTarget(managedHome);
+    mkdirSync(path.dirname(target), { recursive: true });
+    symlinkSync(managedTarget, target);
+
+    await assert.rejects(uninstallCursor({ home, adopt: false, dryRun: false }), /requires --adopt/);
+    assert.equal(lstatSync(target).isSymbolicLink(), true);
+    assert.equal(existsSync(managedTarget), true);
+  } finally {
+    cleanup(home);
+    cleanup(managedHome);
+  }
+});
+
 test('cursor doctor fails on symlink target', async () => {
   const home = tempDir('tsp-cursor-doctor-symlink-');
   const external = tempDir('tsp-cursor-external-');
@@ -186,6 +220,36 @@ test('cursor doctor fails on malformed receipt ownership fields', async () => {
       const result = await doctorCursor({ home, payloadRoot });
       assert.equal(result.status, 'FAIL');
       assert.match(result.message, /receipt/);
+    } finally {
+      cleanup(home);
+    }
+  }
+});
+
+test('cursor doctor fails when receipt version is missing or invalid without payloadRoot', async () => {
+  const cases = [
+    ['missing', undefined],
+    ['empty', ''],
+    ['non-string', 123]
+  ];
+
+  for (const [name, version] of cases) {
+    const home = tempDir(`tsp-cursor-bad-receipt-version-${name}-`);
+    try {
+      await installCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false });
+      const target = cursorTarget(home);
+      const receiptPath = path.join(target, '.t-superpowers-install.json');
+      const receipt = readJson(receiptPath);
+      if (version === undefined) {
+        delete receipt.version;
+      } else {
+        receipt.version = version;
+      }
+      writeJson(receiptPath, receipt);
+
+      const result = await doctorCursor({ home });
+      assert.equal(result.status, 'FAIL');
+      assert.match(result.message, /receipt version/);
     } finally {
       cleanup(home);
     }

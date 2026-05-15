@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { cpSync, mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -47,5 +47,25 @@ export function withDistBuildLock(fn) {
     return fn();
   } finally {
     rmSync(lockDir, { recursive: true, force: true });
+  }
+}
+
+export function buildDistPayloadCopy(prefix = 'tsp-dist-payload-') {
+  const payloadRoot = tempDir(prefix);
+
+  withDistBuildLock(() => {
+    const distRoot = path.resolve('dist/npm-package');
+    rmSync(distRoot, { recursive: true, force: true });
+    const result = runNode(['scripts/build-npm-package.mjs'], { cwd: path.resolve('.') });
+    assertBuildSucceeded(result);
+    cpSync(distRoot, payloadRoot, { recursive: true, dereference: false });
+  });
+
+  return payloadRoot;
+}
+
+function assertBuildSucceeded(result) {
+  if (result.status !== 0) {
+    throw new Error(result.stderr || result.stdout || `build exited ${result.status}`);
   }
 }
