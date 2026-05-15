@@ -31,6 +31,20 @@ Date: 2026-05-15
 - Observation: Cursor doctor returned `PASS`, installed a physical directory, and found 15 `t-*` skill directories. Codex doctor returned the expected `WARN` and found 15 managed skill directories. Claude dry-run returned `PASS` and reported the generated internal marketplace path without writing real user config.
 - Published registry package: NOT RUN. This verifies the generated tarball, not `npx @4399/tdata-t-superpowers@latest`.
 
+## Internal Registry Publish Precheck
+
+- Result: PASS
+- Command:
+  - `npm publish ./dist/npm-package --registry https://registry-npm.gz4399.com/ --dry-run`
+  - `npm whoami --registry https://registry-npm.gz4399.com/`
+  - `npm view @4399/tdata-t-superpowers@5.1.0 version --registry https://registry-npm.gz4399.com/`
+- Exit code:
+  - publish dry-run: 0
+  - whoami: 0
+  - version lookup: 1
+- Observation: publish dry-run reported `+ @4399/tdata-t-superpowers@5.1.0` and did not publish. `npm whoami` returned `lihuajun`. Version lookup returned `E404`, which means this package version is not currently visible in the internal registry to this account.
+- Real publish: NOT RUN.
+
 ## Cursor
 
 - Result: PASS
