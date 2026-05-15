@@ -1,7 +1,7 @@
 ---
 change_id: 20260515-npm-installer-distribution
 created_at: 2026-05-15T02:43:59Z
-updated_at: 2026-05-15T02:43:59Z
+updated_at: 2026-05-15T02:59:30Z
 owner: lihuajun
 ---
 
@@ -10,10 +10,15 @@ owner: lihuajun
 ## Change History
 
 - 2026-05-15: Initial design for distributing `t-superpowers` through an internal npm package with explicit installers for Cursor, Claude Code, and Codex.
+- 2026-05-15: Added implementation guardrails for Cursor preflight, dev marketplace exclusion, version sync, receipt shape, and Codex hook limitations.
 
 ## Context
 
+This change is a distribution sub-item. It is not part of the stage-two trigger convergence, path migration, or long-term spec library work, and it must not block the acceptance of those stage-two items.
+
 Local Cursor plugin testing showed that `/add-plugin /Users/lihuajun/WorkProject/superpowers` can create a symlink and validate the manifest, but the active Cursor Agent runtime still did not expose `t-superpowers` skills after a full Cursor restart. The team needs a production distribution path that does not depend on a local repository symlink or per-user manual copying.
+
+Before implementation starts, the team should run one minimal Cursor physical-directory reproduction: copy the current plugin payload to a non-symlink directory under `~/.cursor/plugins/local/t-superpowers`, restart Cursor, and check whether Cursor Agent exposes `t-*` skills. If that still fails, the Cursor runtime issue must be tracked as a compatibility blocker separate from npm packaging.
 
 The internal package name is:
 
@@ -42,6 +47,7 @@ The design borrows the useful release discipline from `AiResoures`: internal npm
 - Do not modify `vendor/superpowers/`.
 - Do not integrate this package into `ai-assets` yet.
 - Do not write new runtime artifacts under `docs/superpowers/` or `openspec/`.
+- Do not archive this change until the installer is implemented, npm-based smoke is recorded, and the user explicitly requests archive.
 
 ## Package Shape
 
@@ -81,7 +87,7 @@ The npm `package.json` declares:
     "cli/",
     "lib/",
     ".cursor-plugin/",
-    ".claude-plugin/",
+    ".claude-plugin/plugin.json",
     ".codex-plugin/",
     "skills/",
     "agents/",
@@ -96,6 +102,8 @@ The npm `package.json` declares:
 ```
 
 The CLI path uses `cli/` rather than `bin/` so Claude Code does not treat the installer as a plugin executable directory.
+
+The production npm package must not include `.claude-plugin/marketplace.json`. The repository's existing `.claude-plugin/marketplace.json` is a development marketplace with `name: "t-superpowers-dev"` and `source: "./"`. Packaging it into npm would create a misleading second marketplace on user machines. The build must copy `.claude-plugin/plugin.json` only.
 
 ## CLI Commands
 
@@ -150,12 +158,13 @@ File-copy targets write an install receipt so future updates know which files ar
   "installedAt": "2026-05-15T02:43:59Z",
   "source": "npm",
   "managedBy": "tdata-t-superpowers",
-  "managedFiles": [
-    ".cursor-plugin/plugin.json",
-    "skills/t-brainstorming/SKILL.md"
+  "managedDirs": [
+    "."
   ]
 }
 ```
+
+Cursor uses `managedDirs: ["."]` because the whole installed plugin directory is installer-managed. Codex uses `managedDirs` with each managed `t-*` skill directory, such as `["t-brainstorming", "t-using-superpowers"]`. The receipt must not expand every file into a large `managedFiles` list.
 
 Targets without a receipt are treated as user-owned. If they still identify as `t-superpowers`, installation may continue only with `--adopt`. If they identify as another plugin, installation fails and does not mutate files.
 
@@ -289,7 +298,11 @@ Behavior:
 - Every installed `t-*` skill has valid YAML frontmatter with `name` and `description`.
 - The receipt exists and matches the package version.
 
-This path does not install Codex hooks or plugin metadata. It guarantees skill availability, not session-start injection. A future `--experimental-plugin` mode may copy `.codex-plugin/plugin.json` into a Codex plugin cache only after smoke evidence proves the runtime recognizes that form.
+This path does not install Codex hooks or plugin metadata. The repository currently keeps `.codex-plugin/plugin.json` with `hooks: []`, and the stable user-level Codex hook installation path has not been proven for Codex CLI, Codex IDE extension, or Codex App. The skills adapter therefore guarantees skill availability only; it does not provide session-start injection.
+
+`doctor codex` must report this limitation as `WARN` when the skills adapter is installed successfully. README guidance must say that Codex session-start injection requires a future verified Codex plugin path, not the current skills adapter.
+
+A future `--experimental-plugin` mode may copy `.codex-plugin/plugin.json` and Codex hook metadata into a Codex plugin cache only after smoke evidence proves the runtime recognizes that form.
 
 ## Update Model
 
@@ -327,15 +340,27 @@ Expected build steps:
 1. Remove `dist/npm-package/`.
 2. Copy allowlisted plugin files into `dist/npm-package/`.
 3. Generate npm `package.json` with package name `@4399/tdata-t-superpowers`.
-4. Copy or generate `CHANGELOG.md` for internal package releases.
-5. Validate that version fields are synchronized across:
+4. Copy `.claude-plugin/plugin.json` only; do not copy the development `.claude-plugin/marketplace.json`.
+5. Copy or generate `CHANGELOG.md` for internal package releases.
+6. Validate that version fields are synchronized across:
    - root `package.json`
    - `.cursor-plugin/plugin.json`
    - `.claude-plugin/plugin.json`
    - `.codex-plugin/plugin.json`
    - `.claude-plugin/marketplace.json` when kept for local development
    - generated `dist/npm-package/package.json`
-6. Run `npm pack --dry-run ./dist/npm-package`.
+7. Run `npm pack --dry-run ./dist/npm-package`.
+
+Version synchronization should be implemented by a single-purpose lightweight script, for example `tools/sync-versions.mjs`, and called from build or release workflows. The script may update version fields only. It must not change root `package.json` fields such as:
+
+```json
+{
+  "name": "superpowers",
+  "main": ".opencode/plugins/superpowers.js"
+}
+```
+
+Those fields remain upstream-compatible live-surface exceptions and are covered by `tools/t-stage1-check.sh`.
 
 Publish command:
 
@@ -357,7 +382,16 @@ The build must produce a package root that can act as both npm package and plugi
 - When `npm run build` runs
 - Then `dist/npm-package/package.json` has `name: "@4399/tdata-t-superpowers"`
 - And `.cursor-plugin/plugin.json`, `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, `skills/`, `agents/`, `commands/`, `hooks/`, and `assets/` exist under `dist/npm-package/`
+- And `dist/npm-package/.claude-plugin/marketplace.json` does not exist
 - And `npm pack --dry-run ./dist/npm-package` succeeds
+
+#### Scenario: Version sync preserves root package identity
+
+- Given the root `package.json` has `name: "superpowers"` and `main: ".opencode/plugins/superpowers.js"`
+- When the version synchronization script runs
+- Then only version fields are changed
+- And root `package.json` still has `name: "superpowers"`
+- And root `package.json` still has `main: ".opencode/plugins/superpowers.js"`
 
 ### Requirement: Cursor Installs From NPM Payload
 
@@ -408,10 +442,11 @@ The installer must provide a Codex skills distribution path without assuming unv
 - Then `${CODEX_HOME:-~/.codex}/skills/t-brainstorming/SKILL.md` exists
 - And `${CODEX_HOME:-~/.codex}/skills/t-using-superpowers/SKILL.md` exists
 - And `${CODEX_HOME:-~/.codex}/skills/.t-superpowers-install.json` records the package version
+- And `doctor codex` reports `WARN` that session-start hook injection is not installed by the skills adapter
 
 #### Scenario: Codex update only touches managed skills
 
-- Given the Codex install receipt lists installer-managed `t-*` skill directories
+- Given the Codex install receipt lists installer-managed `t-*` skill directories in `managedDirs`
 - When `npx @4399/tdata-t-superpowers@latest update codex` runs
 - Then only receipt-managed skill directories are replaced
 - And unrelated user skills are not changed
@@ -458,6 +493,7 @@ The installer must not overwrite unknown existing plugin or skill directories by
 
 Implementation must include:
 
+- A pre-implementation Cursor physical-directory check that records whether a non-symlink local plugin directory exposes `t-*` skills in Cursor Agent.
 - Unit tests for package layout validation.
 - Unit tests for Cursor install/update/doctor against a temporary `HOME`.
 - Unit tests for Codex install/update/doctor against a temporary `CODEX_HOME`.
@@ -512,4 +548,15 @@ The system must update previously installed targets through explicit `update` co
 
 - Given a target has a `t-superpowers` install receipt
 - When the user runs `npx @4399/tdata-t-superpowers@latest update <target>`
-- Then the installer replaces only managed files and leaves unrelated user files unchanged
+- Then the installer replaces only receipt-managed directories or files and leaves unrelated user files unchanged
+
+##### Requirement: Production Package Excludes Development Marketplace
+
+The system must not ship the development Claude marketplace in the npm package.
+
+###### Scenario: Dev marketplace stripped from package
+
+- Given the repository has `.claude-plugin/marketplace.json` for local development
+- When the npm package is built
+- Then `dist/npm-package/.claude-plugin/plugin.json` exists
+- And `dist/npm-package/.claude-plugin/marketplace.json` does not exist
