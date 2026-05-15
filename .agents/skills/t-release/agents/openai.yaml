@@ -1,0 +1,4 @@
+interface:
+  display_name: "T Release"
+  short_description: "Release t-superpowers npm package"
+  default_prompt: "Use $t-release to prepare and publish the next t-superpowers npm release."
