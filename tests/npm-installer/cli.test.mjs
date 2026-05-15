@@ -77,6 +77,25 @@ test('extra positional arguments exit non-zero with useful error', async () => {
   assert.match(errors.join('\n'), /too many positional arguments/);
 });
 
+test('plain output uses stable target status message format', async () => {
+  const home = tempDir('tsp-cli-plain-');
+  const originalHome = process.env.HOME;
+  const writes = [];
+  try {
+    process.env.HOME = home;
+    const code = await runCli(['doctor', 'cursor'], {
+      stdout: (line) => writes.push(line),
+      stderr: () => {}
+    });
+
+    assert.equal(code, 1);
+    assert.deepEqual(writes, ['cursor: FAIL - cursor plugin target missing']);
+  } finally {
+    process.env.HOME = originalHome;
+    cleanup(home);
+  }
+});
+
 test('doctor all --json includes implemented claude target using native doctor', async () => {
   const home = tempDir('tsp-cli-doctor-all-');
   const codexHome = tempDir('tsp-cli-doctor-all-codex-');
@@ -100,9 +119,16 @@ test('doctor all --json includes implemented claude target using native doctor',
 
     assert.equal(code, 1);
     const output = JSON.parse(writes.join('\n'));
-    assert.equal(output.find((result) => result.target === 'cursor')?.status, 'PASS');
-    assert.equal(output.find((result) => result.target === 'codex')?.status, 'WARN');
-    assert.equal(output.find((result) => result.target === 'claude')?.status, 'UNKNOWN');
+    assert.deepEqual(
+      output.results.map((result) => result.target),
+      ['cursor', 'claude', 'codex']
+    );
+    assert.equal(output.results.find((result) => result.target === 'cursor')?.status, 'PASS');
+    assert.equal(output.results.find((result) => result.target === 'codex')?.status, 'WARN');
+    assert.equal(output.results.find((result) => result.target === 'claude')?.status, 'UNKNOWN');
+    for (const result of output.results) {
+      assert.match(result.status, /^(PASS|WARN|FAIL|UNKNOWN)$/);
+    }
     assert.deepEqual(readFileSync(logFile, 'utf8').trim().split('\n'), [
       'plugin marketplace list --json',
       'plugin list --json'
@@ -116,5 +142,43 @@ test('doctor all --json includes implemented claude target using native doctor',
     cleanup(codexHome);
     cleanup(binDir);
     cleanup(payloadRoot);
+  }
+});
+
+test('all dispatch records target-level failures and continues other targets', async () => {
+  const home = tempDir('tsp-cli-all-continues-');
+  const codexHomeParent = tempDir('tsp-cli-all-continues-codex-');
+  const codexHome = path.join(codexHomeParent, 'not-a-directory');
+  const originalHome = process.env.HOME;
+  const originalCodexHome = process.env.CODEX_HOME;
+  const originalPath = process.env.PATH;
+  const writes = [];
+  try {
+    writeFileSync(codexHome, 'not a directory');
+    process.env.HOME = home;
+    process.env.CODEX_HOME = codexHome;
+    process.env.PATH = '';
+    const code = await runCli(['install', 'all', '--json'], {
+      stdout: (line) => writes.push(line),
+      stderr: () => {}
+    });
+
+    assert.equal(code, 1);
+    const output = JSON.parse(writes.join('\n'));
+    assert.deepEqual(
+      output.results.map((result) => result.target),
+      ['cursor', 'claude', 'codex']
+    );
+    assert.equal(output.results.length, 3);
+    assert.equal(output.results.find((result) => result.target === 'cursor')?.status, 'PASS');
+    assert.equal(output.results.find((result) => result.target === 'claude')?.status, 'FAIL');
+    assert.equal(output.results.find((result) => result.target === 'codex')?.status, 'FAIL');
+  } finally {
+    process.env.HOME = originalHome;
+    if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = originalCodexHome;
+    process.env.PATH = originalPath;
+    cleanup(home);
+    cleanup(codexHomeParent);
   }
 });

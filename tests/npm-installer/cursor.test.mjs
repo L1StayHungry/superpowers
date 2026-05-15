@@ -283,8 +283,8 @@ test('CLI doctor cursor emits result in JSON mode against temp HOME', async () =
 
     assert.equal(code, 0);
     const output = JSON.parse(writes.join('\n'));
-    assert.equal(output[0].target, 'cursor');
-    assert.equal(output[0].status, 'PASS');
+    assert.equal(output.results[0].target, 'cursor');
+    assert.equal(output.results[0].status, 'PASS');
   } finally {
     process.env.HOME = originalHome;
     cleanup(home);

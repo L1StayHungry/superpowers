@@ -303,8 +303,8 @@ test('CLI doctor codex honors CODEX_HOME env', async () => {
 
     assert.equal(code, 0);
     const output = JSON.parse(writes.join('\n'));
-    assert.equal(output[0].target, 'codex');
-    assert.equal(output[0].status, 'WARN');
+    assert.equal(output.results[0].target, 'codex');
+    assert.equal(output.results[0].status, 'WARN');
   } finally {
     if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
     else process.env.CODEX_HOME = originalCodexHome;
