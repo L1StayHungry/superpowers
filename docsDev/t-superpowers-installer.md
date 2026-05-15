@@ -8,6 +8,22 @@ npx @4399/tdata-t-superpowers@latest install all
 npx @4399/tdata-t-superpowers@latest doctor all
 ```
 
+## Update
+
+```bash
+npx @4399/tdata-t-superpowers@latest update all
+npx @4399/tdata-t-superpowers@latest doctor all
+```
+
+## Uninstall
+
+```bash
+npx @4399/tdata-t-superpowers@latest uninstall cursor
+npx @4399/tdata-t-superpowers@latest uninstall codex
+```
+
+Claude Code uninstall delegates to Claude's native plugin command.
+
 ## Cursor
 
 Cursor installation copies a physical plugin directory to:

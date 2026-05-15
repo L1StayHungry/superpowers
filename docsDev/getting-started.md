@@ -24,6 +24,20 @@ For ambiguous work, ask for `t-superpowers` explicitly if you want the full work
 
 Official `superpowers` and internal `t-superpowers` can coexist for namespace testing, but normal team usage should enable one family at a time. Enabling both can inject two bootstrap contexts and make trigger behavior noisy.
 
+## Recommended Internal NPM Install
+
+For normal team usage, install the internal package instead of using Cursor `/add-plugin` against the repository checkout:
+
+```bash
+npm config set @4399:registry https://registry-npm.gz4399.com/
+npx @4399/tdata-t-superpowers@latest install all
+npx @4399/tdata-t-superpowers@latest doctor all
+```
+
+Cursor must receive a physical plugin directory. Local smoke showed Cursor did not reliably expose skills from the symlink created by `/add-plugin /Users/lihuajun/WorkProject/superpowers`, while the same payload worked after copying into `~/.cursor/plugins/local/t-superpowers`.
+
+Codex installation currently uses a skills adapter. It installs `t-*` skills but does not install session-start hooks, so `doctor codex` reports `WARN` for that limitation.
+
 ## Local Enablement
 
 Use your clone path in place of `/Users/lihuajun/WorkProject/superpowers`.
