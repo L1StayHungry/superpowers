@@ -1,13 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync
+} from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { tempDir, cleanup, writeJson as writeFixtureJson } from './helpers.mjs';
 import {
+  atomicReplace,
   copyDirectory,
   exists,
+  isSymlink,
+  makeExecutable,
   readJson,
+  removePath,
   writeJson
 } from '../../lib/fs-ops.mjs';
 import {
@@ -47,6 +57,88 @@ test('readJson and writeJson create parent dirs and round-trip data', () => {
     const file = path.join(dir, 'nested/value.json');
     writeJson(file, { ok: true });
     assert.deepEqual(readJson(file), { ok: true });
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('isSymlink detects symlinks and returns false for absent paths', () => {
+  const dir = tempDir('tsp-symlink-');
+  try {
+    const target = path.join(dir, 'target.txt');
+    const link = path.join(dir, 'link.txt');
+    writeFileSync(target, 'ok');
+    symlinkSync(target, link);
+
+    assert.equal(isSymlink(link), true);
+    assert.equal(isSymlink(target), false);
+    assert.equal(isSymlink(path.join(dir, 'missing')), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('removePath removes files and directories without failing on absent paths', () => {
+  const dir = tempDir('tsp-remove-');
+  try {
+    const target = path.join(dir, 'nested');
+    mkdirSync(target, { recursive: true });
+    writeFileSync(path.join(target, 'value.txt'), 'ok');
+
+    removePath(target);
+    removePath(target);
+
+    assert.equal(exists(target), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('atomicReplace replaces target and removes staging on success', () => {
+  const dir = tempDir('tsp-atomic-');
+  try {
+    const staging = path.join(dir, 'staging');
+    const target = path.join(dir, 'target');
+    mkdirSync(staging, { recursive: true });
+    mkdirSync(target, { recursive: true });
+    writeFileSync(path.join(staging, 'value.txt'), 'new');
+    writeFileSync(path.join(target, 'value.txt'), 'old');
+
+    atomicReplace(staging, target);
+
+    assert.equal(readFileSync(path.join(target, 'value.txt'), 'utf8'), 'new');
+    assert.equal(exists(staging), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('atomicReplace restores target if staging rename fails', () => {
+  const dir = tempDir('tsp-atomic-restore-');
+  try {
+    const staging = path.join(dir, 'missing-staging');
+    const target = path.join(dir, 'target');
+    mkdirSync(target, { recursive: true });
+    writeFileSync(path.join(target, 'value.txt'), 'old');
+
+    assert.throws(() => atomicReplace(staging, target), /ENOENT/);
+
+    assert.equal(readFileSync(path.join(target, 'value.txt'), 'utf8'), 'old');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('makeExecutable sets executable bits and is a no-op for absent files', () => {
+  const dir = tempDir('tsp-executable-');
+  try {
+    const file = path.join(dir, 'run.sh');
+    writeFileSync(file, '#!/bin/sh\n');
+
+    makeExecutable(file);
+    makeExecutable(path.join(dir, 'missing.sh'));
+
+    assert.equal((statSync(file).mode & 0o111) !== 0, true);
   } finally {
     cleanup(dir);
   }
@@ -139,6 +231,27 @@ test('packageRootFromModule resolves package root from simulated lib module URL'
     const moduleUrl = pathToFileURL(path.join(dir, 'lib/payload.mjs')).href;
 
     assert.equal(packageRootFromModule(moduleUrl), dir);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('packageRootFromModule walks up to package markers when path contains earlier lib segment and caller is under cli', () => {
+  const dir = tempDir('tsp-root-lib-');
+  try {
+    const packageRoot = path.join(dir, 'lib/pkg/dist/npm-package');
+    mkdirSync(path.join(packageRoot, 'cli'), { recursive: true });
+    mkdirSync(path.join(packageRoot, '.cursor-plugin'), { recursive: true });
+    mkdirSync(path.join(packageRoot, 'skills'), { recursive: true });
+    writeFixtureJson(path.join(packageRoot, 'package.json'), {
+      name: '@4399/tdata-t-superpowers'
+    });
+    writeFixtureJson(path.join(packageRoot, '.cursor-plugin/plugin.json'), {
+      name: 't-superpowers'
+    });
+    const moduleUrl = pathToFileURL(path.join(packageRoot, 'cli/tdata-t-superpowers.js')).href;
+
+    assert.equal(packageRootFromModule(moduleUrl), packageRoot);
   } finally {
     cleanup(dir);
   }
