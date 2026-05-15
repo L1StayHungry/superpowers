@@ -107,6 +107,7 @@ function validateLayout() {
   }
   ensureExists(join(DIST, '.codex-plugin/plugin.json'));
   ensureExists(join(DIST, 'skills/t-brainstorming/SKILL.md'));
+  ensureExists(join(DIST, 'hooks/hooks-cursor.json'));
   ensureExists(join(DIST, 'README.md'));
 }
 
