@@ -1,7 +1,7 @@
 ---
 change_id: 20260515-npm-installer-distribution
 created_at: 2026-05-15T02:43:59Z
-updated_at: 2026-05-15T02:59:30Z
+updated_at: 2026-05-15T03:27:36Z
 owner: lihuajun
 ---
 
@@ -11,6 +11,7 @@ owner: lihuajun
 
 - 2026-05-15: Initial design for distributing `t-superpowers` through an internal npm package with explicit installers for Cursor, Claude Code, and Codex.
 - 2026-05-15: Added implementation guardrails for Cursor preflight, dev marketplace exclusion, version sync, receipt shape, and Codex hook limitations.
+- 2026-05-15: Updated Cursor context after physical-directory smoke succeeded and symlink install remained blocked.
 
 ## Context
 
@@ -18,7 +19,7 @@ This change is a distribution sub-item. It is not part of the stage-two trigger 
 
 Local Cursor plugin testing showed that `/add-plugin /Users/lihuajun/WorkProject/superpowers` can create a symlink and validate the manifest, but the active Cursor Agent runtime still did not expose `t-superpowers` skills after a full Cursor restart. The team needs a production distribution path that does not depend on a local repository symlink or per-user manual copying.
 
-Before implementation starts, the team should run one minimal Cursor physical-directory reproduction: copy the current plugin payload to a non-symlink directory under `~/.cursor/plugins/local/t-superpowers`, restart Cursor, and check whether Cursor Agent exposes `t-*` skills. If that still fails, the Cursor runtime issue must be tracked as a compatibility blocker separate from npm packaging.
+The minimal Cursor physical-directory reproduction has now passed: after replacing the symlink with a real directory under `~/.cursor/plugins/local/t-superpowers`, Cursor listed `T Superpowers` as a local plugin with 15 skills and `/t-brainstorming` entered the expected workflow. This makes "copy a physical plugin directory" a required Cursor installer behavior, not just an implementation preference.
 
 The internal package name is:
 
@@ -493,7 +494,7 @@ The installer must not overwrite unknown existing plugin or skill directories by
 
 Implementation must include:
 
-- A pre-implementation Cursor physical-directory check that records whether a non-symlink local plugin directory exposes `t-*` skills in Cursor Agent.
+- A recorded Cursor physical-directory smoke result showing that a non-symlink local plugin directory exposes `t-*` skills in Cursor Agent.
 - Unit tests for package layout validation.
 - Unit tests for Cursor install/update/doctor against a temporary `HOME`.
 - Unit tests for Codex install/update/doctor against a temporary `CODEX_HOME`.
@@ -509,7 +510,7 @@ Implementation must include:
 
 ## Risks
 
-- Cursor may still fail to expose plugin skills even from a physical production directory. If that happens, the installer is still useful for deterministic deployment, but Cursor runtime behavior remains a separate compatibility blocker.
+- Cursor did not expose skills when installed through a symlink created by `/add-plugin /Users/lihuajun/WorkProject/superpowers`, but did expose skills after the same payload was copied into a physical local plugin directory. The installer must therefore copy payloads for Cursor rather than symlink them.
 - Codex skills install does not provide session-start injection. It only makes `t-*` skills available through Codex skill discovery.
 - Claude Code npm source behavior depends on the internal registry being reachable from the user's machine.
 - Existing local symlink installs require `--adopt` or manual cleanup before the first production install.

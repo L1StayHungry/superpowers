@@ -45,7 +45,7 @@ Change: `20260515-harness-smoke`
 - Source: `/Users/lihuajun/WorkProject/superpowers`
 - Target: `~/.cursor/plugins/local/t-superpowers`
 - Disk setup result: PASS
-- Runtime result: NOT VERIFIED
+- Runtime result: PASS
 - Setup notes:
   - Removed symlink `~/.cursor/plugins/local/t-superpowers -> /Users/lihuajun/WorkProject/superpowers`.
   - Copied physical plugin payload into `~/.cursor/plugins/local/t-superpowers`.
@@ -55,11 +55,11 @@ Change: `20260515-harness-smoke`
   - Verified `skills/t-brainstorming/SKILL.md` exists.
   - Verified `hooks/hooks-cursor.json` exists.
   - Verified `hooks/session-start` is executable.
-- Expected manual check after preparation:
-  1. Fully quit Cursor.
-  2. Reopen Cursor and start a new Agent session.
-  3. Ask: `请列出当前可用 skills 中名称包含 t- 或 t-superpowers 的条目。只列名称，不要做项目分析。`
-  4. Ask: `用 t-superpowers:t-brainstorming，帮我规划首页 PDF 导出功能；先不要实现。`
+- Runtime evidence:
+  - User-provided Cursor screenshot shows the Plugins UI listing `T Superpowers` as `Local` with `15 skills`.
+  - User-provided Cursor screenshot shows `/t-brainstorming 帮我规划首页 PDF 导出功能；先不要实现。` entering the `t-brainstorming` workflow.
+  - Cursor created the expected `t-brainstorming` task list and began exploring project context rather than saying the skill was missing.
+- Observation: physical directory installation works where symlink installation did not. The current root cause hypothesis is that Cursor local plugin discovery does not accept, or does not reliably activate, the symlink created by `/add-plugin /Users/lihuajun/WorkProject/superpowers`.
 
 ## Codex App
 
