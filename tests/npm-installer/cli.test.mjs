@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runCli } from '../../lib/cli.mjs';
+import { installCodex } from '../../lib/targets/codex.mjs';
 import { installCursor } from '../../lib/targets/cursor.mjs';
 import { buildDistPayloadCopy, cleanup, tempDir } from './helpers.mjs';
 
@@ -50,14 +51,18 @@ test('extra positional arguments exit non-zero with useful error', async () => {
   assert.match(errors.join('\n'), /too many positional arguments/);
 });
 
-test('doctor all --json treats UNKNOWN targets as non-success', async () => {
+test('doctor all --json treats unimplemented claude target as non-success', async () => {
   const home = tempDir('tsp-cli-doctor-all-');
+  const codexHome = tempDir('tsp-cli-doctor-all-codex-');
   const payloadRoot = buildDistPayloadCopy('tsp-cli-payload-');
   const originalHome = process.env.HOME;
+  const originalCodexHome = process.env.CODEX_HOME;
   const writes = [];
   try {
     await installCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false });
+    await installCodex({ payloadRoot, codexHome, adopt: false, force: false, dryRun: false });
     process.env.HOME = home;
+    process.env.CODEX_HOME = codexHome;
     const code = await runCli(['doctor', 'all', '--json'], {
       stdout: (line) => writes.push(line),
       stderr: () => {}
@@ -66,11 +71,14 @@ test('doctor all --json treats UNKNOWN targets as non-success', async () => {
     assert.equal(code, 1);
     const output = JSON.parse(writes.join('\n'));
     assert.equal(output.find((result) => result.target === 'cursor')?.status, 'PASS');
+    assert.equal(output.find((result) => result.target === 'codex')?.status, 'WARN');
     assert.equal(output.find((result) => result.target === 'claude')?.status, 'UNKNOWN');
-    assert.equal(output.find((result) => result.target === 'codex')?.status, 'UNKNOWN');
   } finally {
     process.env.HOME = originalHome;
+    if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = originalCodexHome;
     cleanup(home);
+    cleanup(codexHome);
     cleanup(payloadRoot);
   }
 });
