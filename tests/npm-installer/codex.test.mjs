@@ -29,6 +29,7 @@ function receiptFile(codexHome) {
 
 test('codexSkillsRoot resolves CODEX_HOME skills directory with fallback', () => {
   assert.equal(codexSkillsRoot('/tmp/example-codex'), path.join('/tmp/example-codex', 'skills'));
+  assert.equal(codexSkillsRoot(''), path.join(process.env.HOME, '.codex', 'skills'));
 });
 
 test('codex install copies t skills and writes managedDirs receipt', async () => {
@@ -116,6 +117,35 @@ test('codex update with receipt leaves unrelated skill directories alone', async
     assert.equal(readFileSync(path.join(unrelated, 'SKILL.md'), 'utf8'), 'custom\n');
   } finally {
     cleanup(codexHome);
+  }
+});
+
+test('codex update prunes stale receipt-managed skills and leaves unrelated user skills alone', async () => {
+  const codexHome = tempDir('tsp-codex-update-prune-');
+  const payloadWithRetired = tempDir('tsp-codex-retired-payload-');
+  try {
+    cpSync(payloadRoot, payloadWithRetired, { recursive: true });
+    const retiredSkill = path.join(payloadWithRetired, 'skills/t-retired');
+    mkdirSync(retiredSkill, { recursive: true });
+    writeFileSync(path.join(retiredSkill, 'SKILL.md'), '---\nname: t-retired\ndescription: retired test skill\n---\n');
+
+    await installCodex({ payloadRoot: payloadWithRetired, codexHome, adopt: false, force: false, dryRun: false });
+
+    const skillsRoot = codexSkillsRoot(codexHome);
+    const unrelated = path.join(skillsRoot, 'custom-user-skill');
+    mkdirSync(unrelated, { recursive: true });
+    writeFileSync(path.join(unrelated, 'SKILL.md'), 'custom\n');
+
+    const result = await updateCodex({ payloadRoot, codexHome, adopt: false, force: false, dryRun: false });
+    assert.equal(result.status, 'WARN');
+    assert.equal(existsSync(path.join(skillsRoot, 't-retired')), false);
+    assert.equal(readFileSync(path.join(unrelated, 'SKILL.md'), 'utf8'), 'custom\n');
+
+    const receipt = readJson(receiptFile(codexHome));
+    assert.equal(receipt.managedDirs.includes('t-retired'), false);
+  } finally {
+    cleanup(codexHome);
+    cleanup(payloadWithRetired);
   }
 });
 
