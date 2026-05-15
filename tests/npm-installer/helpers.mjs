@@ -27,3 +27,25 @@ export function runNode(args, options = {}) {
     encoding: 'utf8'
   });
 }
+
+export function withDistBuildLock(fn) {
+  const lockDir = path.join(tmpdir(), 'tsp-npm-package-build.lock');
+  const deadline = Date.now() + 10000;
+
+  while (true) {
+    try {
+      mkdirSync(lockDir);
+      break;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      if (Date.now() > deadline) throw new Error(`timed out waiting for ${lockDir}`);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+  }
+
+  try {
+    return fn();
+  } finally {
+    rmSync(lockDir, { recursive: true, force: true });
+  }
+}

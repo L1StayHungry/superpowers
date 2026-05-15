@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { runCli } from '../../lib/cli.mjs';
+import { installCursor } from '../../lib/targets/cursor.mjs';
+import { cleanup, tempDir } from './helpers.mjs';
 
 test('help lists supported commands and targets', async () => {
   const writes = [];
@@ -46,4 +49,27 @@ test('extra positional arguments exit non-zero with useful error', async () => {
 
   assert.equal(code, 2);
   assert.match(errors.join('\n'), /too many positional arguments/);
+});
+
+test('doctor all --json treats UNKNOWN targets as non-success', async () => {
+  const home = tempDir('tsp-cli-doctor-all-');
+  const originalHome = process.env.HOME;
+  const writes = [];
+  try {
+    await installCursor({ payloadRoot: path.resolve('.'), home, adopt: false, force: false, dryRun: false });
+    process.env.HOME = home;
+    const code = await runCli(['doctor', 'all', '--json'], {
+      stdout: (line) => writes.push(line),
+      stderr: () => {}
+    });
+
+    assert.equal(code, 1);
+    const output = JSON.parse(writes.join('\n'));
+    assert.equal(output.find((result) => result.target === 'cursor')?.status, 'PASS');
+    assert.equal(output.find((result) => result.target === 'claude')?.status, 'UNKNOWN');
+    assert.equal(output.find((result) => result.target === 'codex')?.status, 'UNKNOWN');
+  } finally {
+    process.env.HOME = originalHome;
+    cleanup(home);
+  }
 });
