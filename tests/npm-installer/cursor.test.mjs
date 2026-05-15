@@ -1,10 +1,10 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { existsSync, lstatSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { buildDistPayloadCopy, tempDir, cleanup, readJson, writeJson } from './helpers.mjs';
 import { runCli } from '../../lib/cli.mjs';
-import { cursorTarget, doctorCursor, installCursor, uninstallCursor } from '../../lib/targets/cursor.mjs';
+import { cursorTarget, doctorCursor, installCursor, uninstallCursor, updateCursor } from '../../lib/targets/cursor.mjs';
 
 let payloadRoot;
 
@@ -52,6 +52,46 @@ test('cursor doctor passes for physical install', async () => {
     assert.equal(result.status, 'PASS');
     assert.match(result.message, /restart Cursor/);
     assert.equal(result.details.skillCount >= 15, true);
+  } finally {
+    cleanup(home);
+  }
+});
+
+test('cursor update is no-op when version matches unless forced', async () => {
+  const home = tempDir('tsp-cursor-update-noop-');
+  try {
+    await installCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false });
+    const target = cursorTarget(home);
+    const receiptPath = path.join(target, '.t-superpowers-install.json');
+    const before = readJson(receiptPath);
+
+    const result = await updateCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false });
+    const after = readJson(receiptPath);
+
+    assert.equal(result.status, 'PASS');
+    assert.equal(result.changed, false);
+    assert.deepEqual(after, before);
+    assert.equal(existsSync(path.join(home, '.t-superpowers/backups/cursor')), false);
+  } finally {
+    cleanup(home);
+  }
+});
+
+test('cursor update backs up managed install when version differs', async () => {
+  const home = tempDir('tsp-cursor-update-backup-');
+  try {
+    await installCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false });
+    const target = cursorTarget(home);
+    const receiptPath = path.join(target, '.t-superpowers-install.json');
+    writeJson(receiptPath, { ...readJson(receiptPath), version: '0.0.0' });
+
+    const result = await updateCursor({ payloadRoot, home, adopt: false, force: false, dryRun: false });
+
+    assert.equal(result.status, 'PASS');
+    assert.equal(readJson(receiptPath).version, readJson(path.join(payloadRoot, 'package.json')).version);
+    assert.equal(existsSync(result.details.backup), true);
+    assert.equal(readJson(path.join(result.details.backup, '.t-superpowers-install.json')).version, '0.0.0');
+    assert.equal(readdirSync(path.join(home, '.t-superpowers/backups/cursor')).length, 1);
   } finally {
     cleanup(home);
   }

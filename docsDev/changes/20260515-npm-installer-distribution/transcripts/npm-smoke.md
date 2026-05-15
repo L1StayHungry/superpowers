@@ -14,7 +14,7 @@ Date: 2026-05-15
 - Result: PASS
 - Command: `npm pack ./dist/npm-package --dry-run`
 - Exit code: 0
-- Observation: dry-run tarball was `@4399/tdata-t-superpowers@5.1.0`, filename `4399-tdata-t-superpowers-5.1.0.tgz`, 71 files, package size 150.7 kB. Tarball contents included `.claude-plugin/plugin.json` and did not include `.claude-plugin/marketplace.json`.
+- Observation: dry-run tarball was `@4399/tdata-t-superpowers@5.1.0`, filename `4399-tdata-t-superpowers-5.1.0.tgz`, 72 files, package size 151.3 kB. Tarball contents included `.claude-plugin/plugin.json` and did not include `.claude-plugin/marketplace.json`.
 
 ## Cursor
 
@@ -68,4 +68,4 @@ Date: 2026-05-15
   - git diff check: 0
   - stage 1 check: 0
   - old-path grep: 1
-- Observation: npm installer suite passed 65/65. Stage 1 guardrail printed `OK: Stage 1 migration self-check passed`. Old-path grep returned no matches, so exit 1 is expected for the grep command.
+- Observation: npm installer suite passed 67/67. Stage 1 guardrail printed `OK: Stage 1 migration self-check passed`. Old-path grep returned no matches, so exit 1 is expected for the grep command.

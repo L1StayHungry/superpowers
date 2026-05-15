@@ -114,6 +114,7 @@ test('codex update with receipt leaves unrelated skill directories alone', async
 
     const result = await updateCodex({ payloadRoot, codexHome, adopt: false, force: false, dryRun: false });
     assert.equal(result.status, 'WARN');
+    assert.equal(result.changed, false);
     assert.equal(readFileSync(path.join(unrelated, 'SKILL.md'), 'utf8'), 'custom\n');
   } finally {
     cleanup(codexHome);
@@ -130,6 +131,7 @@ test('codex update prunes stale receipt-managed skills and leaves unrelated user
     writeFileSync(path.join(retiredSkill, 'SKILL.md'), '---\nname: t-retired\ndescription: retired test skill\n---\n');
 
     await installCodex({ payloadRoot: payloadWithRetired, codexHome, adopt: false, force: false, dryRun: false });
+    writeJson(receiptFile(codexHome), { ...readJson(receiptFile(codexHome)), version: '0.0.0' });
 
     const skillsRoot = codexSkillsRoot(codexHome);
     const unrelated = path.join(skillsRoot, 'custom-user-skill');
@@ -140,6 +142,8 @@ test('codex update prunes stale receipt-managed skills and leaves unrelated user
     assert.equal(result.status, 'WARN');
     assert.equal(existsSync(path.join(skillsRoot, 't-retired')), false);
     assert.equal(readFileSync(path.join(unrelated, 'SKILL.md'), 'utf8'), 'custom\n');
+    assert.equal(existsSync(path.join(result.details.backup, 'skills/t-retired/SKILL.md')), true);
+    assert.equal(readJson(path.join(result.details.backup, 'skills/.t-superpowers-install.json')).version, '0.0.0');
 
     const receipt = readJson(receiptFile(codexHome));
     assert.equal(receipt.managedDirs.includes('t-retired'), false);
