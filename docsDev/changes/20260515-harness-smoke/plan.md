@@ -29,7 +29,7 @@ owner: lihuajun
 **Files:**
 - Create runtime directory only: `docsDev/changes/20260515-harness-smoke/transcripts/raw/`
 
-- [ ] **Step 1: Create transcript directories**
+- [x] **Step 1: Create transcript directories**
 
 Run:
 
@@ -39,7 +39,7 @@ mkdir -p docsDev/changes/20260515-harness-smoke/transcripts/raw
 
 Expected: exit `0`.
 
-- [ ] **Step 2: Create scratch project**
+- [x] **Step 2: Create scratch project**
 
 Run:
 
@@ -59,7 +59,7 @@ EOF
 
 Expected: exit `0`. The scratch project exists outside this repository.
 
-- [ ] **Step 3: Record baseline repository state**
+- [x] **Step 3: Record baseline repository state**
 
 Run:
 
@@ -79,7 +79,7 @@ Expected: only `docsDev/changes/20260515-harness-smoke` is active for this smoke
 - Create: `docsDev/changes/20260515-harness-smoke/transcripts/raw/claude-explicit.stderr.log`
 - Create: `docsDev/changes/20260515-harness-smoke/transcripts/cli-smoke.md`
 
-- [ ] **Step 1: Run simple Claude prompt**
+- [x] **Step 1: Run simple Claude prompt**
 
 Run:
 
@@ -97,7 +97,7 @@ claude -p "帮我把按钮文案从'确定'改成'OK'" \
 
 Expected: command exits `0` or records a clear harness error in stderr. Do not treat a harness error as a prompt failure; classify it as `BLOCKED`.
 
-- [ ] **Step 2: Classify simple Claude prompt**
+- [x] **Step 2: Classify simple Claude prompt**
 
 Run:
 
@@ -112,7 +112,7 @@ fi
 
 Expected: prints `PASS`.
 
-- [ ] **Step 3: Run explicit complex Claude prompt**
+- [x] **Step 3: Run explicit complex Claude prompt**
 
 Run:
 
@@ -130,7 +130,7 @@ claude -p "用 t-superpowers，我要做一个 PDF 导出功能" \
 
 Expected: command exits `0` or records a clear harness error in stderr. Do not continue to classify as prompt failure if the CLI itself is blocked.
 
-- [ ] **Step 4: Classify explicit complex Claude prompt**
+- [x] **Step 4: Classify explicit complex Claude prompt**
 
 Run:
 
@@ -145,7 +145,7 @@ fi
 
 Expected: prints `PASS`.
 
-- [ ] **Step 5: Create CLI smoke summary**
+- [x] **Step 5: Create CLI smoke summary**
 
 Create `docsDev/changes/20260515-harness-smoke/transcripts/cli-smoke.md` with:
 
@@ -187,7 +187,7 @@ Then replace each `NOT VERIFIED` result and `classification pending` observation
 - Create if run: `docsDev/changes/20260515-harness-smoke/transcripts/raw/codex-explicit.stderr.log`
 - Modify: `docsDev/changes/20260515-harness-smoke/transcripts/cli-smoke.md`
 
-- [ ] **Step 1: Check Codex CLI availability**
+- [x] **Step 1: Check Codex CLI availability**
 
 Run:
 
@@ -197,7 +197,7 @@ command -v codex
 
 Expected: if missing, append `Codex CLI: BLOCKED - codex command unavailable` to `cli-smoke.md` and skip this task.
 
-- [ ] **Step 2: Check local t-superpowers loading path**
+- [x] **Step 2: Check local t-superpowers loading path**
 
 Use the same isolated `CODEX_HOME` approach previously recorded for trigger convergence. Do not modify the user's global Codex configuration. If the local plugin cache path cannot be set up safely, append:
 
@@ -210,7 +210,7 @@ Use the same isolated `CODEX_HOME` approach previously recorded for trigger conv
 
 Expected: blocked status is acceptable when plugin loading is unavailable.
 
-- [ ] **Step 3: Run Codex simple prompt if setup is available**
+- [x] **Step 3: Skip Codex simple prompt because local setup is blocked**
 
 Run from a scratch project with isolated `CODEX_HOME`. The variable must point to a temporary Codex home that already has local `t-superpowers` available:
 
@@ -231,7 +231,7 @@ CODEX_HOME="${CODEX_SMOKE_HOME}" codex exec --json --skip-git-repo-check \
 
 Expected: transcript does not contain `t-superpowers:t-brainstorming`.
 
-- [ ] **Step 4: Run Codex explicit complex prompt if setup is available**
+- [x] **Step 4: Skip Codex explicit complex prompt because local setup is blocked**
 
 Run:
 
@@ -252,7 +252,7 @@ CODEX_HOME="${CODEX_SMOKE_HOME}" codex exec --json --skip-git-repo-check \
 
 Expected: transcript contains `t-superpowers` or `t-brainstorming`.
 
-- [ ] **Step 5: Append Codex CLI summary**
+- [x] **Step 5: Append Codex CLI summary**
 
 Append Codex CLI result sections to `cli-smoke.md` with result `PASS`, `FAIL`, or `BLOCKED`, raw log paths, and observations.
 
@@ -335,7 +335,7 @@ Record the user observation in `transcripts/app-smoke.md` under the Codex App se
 - Modify: `docsDev/changes/20260515-harness-smoke/transcripts/app-smoke.md`
 - Modify: `docsDev/changes/20260515-harness-smoke/plan.md`
 
-- [ ] **Step 1: Verify stage and formatting**
+- [x] **Step 1: Verify stage and formatting**
 
 Run:
 
@@ -351,7 +351,7 @@ fi
 
 Expected: all commands exit `0`.
 
-- [ ] **Step 2: Append verification log**
+- [x] **Step 2: Append verification log**
 
 Append a `## Verification Log` section to this plan with UTC timestamp, commands, exit codes, and final classification for each harness.
 
@@ -395,3 +395,40 @@ Run these in Cursor.app and Codex App after I ask for app smoke:
 - Scope control: this plan verifies harness behavior only and does not change skills, hooks, manifests, archive tooling, or vendor.
 - Path consistency: all new evidence paths are under `docsDev/changes/20260515-harness-smoke/`.
 - App limitations: Cursor.app and Codex App install/load issues are explicitly classified as `BLOCKED`, not hidden.
+
+## Verification Log
+
+### 2026-05-15 CLI Smoke Verification
+
+Timestamp: `2026-05-15T01:23:44Z`
+
+CLI classifications:
+
+- PASS: Claude Code CLI simple prompt did not make a `Skill` tool call and stayed in direct edit flow.
+- PASS: Claude Code CLI explicit complex prompt made a `Skill` tool call for `t-superpowers:t-brainstorming` and produced clarifying-question behavior.
+- BLOCKED: Codex CLI is installed as `codex-cli 0.123.0`, but local `t-superpowers` plugin loading was not available in an isolated, non-global setup.
+- NOT VERIFIED: Cursor.app smoke requires user-operated desktop validation.
+- NOT VERIFIED: Codex App smoke requires user-operated desktop validation.
+
+Execution evidence:
+
+- `claude -p "帮我把按钮文案从'确定'改成'OK'" --plugin-dir /Users/lihuajun/WorkProject/superpowers --output-format stream-json --verbose`: exit `0`; raw stream stored at `transcripts/raw/claude-simple.jsonl`; stderr is empty.
+- `python3` JSONL classification for `claude-simple.jsonl`: exit `0`; `Skill` tool calls: none.
+- `claude -p "用 t-superpowers，我要做一个 PDF 导出功能" --plugin-dir /Users/lihuajun/WorkProject/superpowers --output-format stream-json --verbose`: exit `0`; raw stream stored at `transcripts/raw/claude-explicit.jsonl`; stderr is empty.
+- `python3` JSONL classification for `claude-explicit.jsonl`: exit `0`; `Skill` tool call found for `t-superpowers:t-brainstorming`.
+- `command -v codex && codex --version`: exit `0`; output includes `codex-cli 0.123.0`.
+- `CODEX_HOME=/tmp/codex-home-harness-smoke codex exec ...`: exit `1`; blocked by missing authentication in isolated `CODEX_HOME`.
+- `CODEX_HOME=/tmp/codex-home-harness-smoke-* codex debug prompt-input ...`: exit `0`; prompt input did not expose local `t-superpowers` skills after temporary marketplace/cache setup.
+
+Deterministic checks:
+
+- `git diff --check -- docsDev/changes/20260515-harness-smoke`: exit `0`.
+- `bash tools/t-stage1-check.sh`: exit `0`; output `OK: Stage 1 migration self-check passed`.
+- `rg -n "Result: (PASS|FAIL|BLOCKED|NOT VERIFIED)" docsDev/changes/20260515-harness-smoke/transcripts`: exit `0`; found CLI and App result classifications.
+- `find docs/superpowers -newer docsDev/changes/20260515-harness-smoke/spec.md -type f 2>/dev/null | rg .`: exit `1` inside the `if` check, interpreted as pass because no new `docs/superpowers` artifact was found.
+
+Notes:
+
+- The plan's initial raw `rg "t-brainstorming"` classification was too broad for Claude Code CLI because startup metadata lists available slash commands. Final classification uses actual assistant `tool_use` events.
+- Claude simple prompt hit write approval denial after avoiding `t-brainstorming`; this is a CLI permission behavior, not a trigger regression.
+- Claude explicit prompt hit non-interactive permission denials for `Skill` and `AskUserQuestion`, but the raw stream still shows the intended `t-superpowers:t-brainstorming` entry and clarifying-question behavior.
