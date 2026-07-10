@@ -45,6 +45,10 @@ fi
 test -f "$PROJECT_DIR/package.json" || fail "package.json missing from main project"
 test -f "$PROJECT_DIR/src/math.js" || fail "src/math.js missing from main project"
 test -f "$PROJECT_DIR/test/math.test.js" || fail "test/math.test.js missing from main project"
+test -f "$PROJECT_DIR/docsDev/changes/t-smoke/transcripts/sdd/.gitignore" \
+  || fail "SDD workspace did not self-ignore under docsDev"
+test -f "$PROJECT_DIR/docsDev/changes/t-smoke/transcripts/sdd/progress.md" \
+  || fail "SDD progress ledger missing"
 
 if ! grep -q 'node --test' "$PROJECT_DIR/package.json"; then
   fail "package.json does not define node --test"

@@ -5,6 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEST_FILE="$SCRIPT_DIR/test-subagent-driven-development-integration.sh"
+RESUME_TEST_FILE="$SCRIPT_DIR/test-subagent-driven-development-resume-integration.sh"
 
 if ! grep -q "disposable test repository" "$TEST_FILE"; then
   echo "FAIL: integration prompt must say the repo is disposable"
@@ -36,5 +37,23 @@ if ! grep -q -- "--disallowed-tools Read" "$TEST_FILE"; then
   exit 1
 fi
 
+if ! grep -q 'exact t-superpowers:t-subagent-driven-development skill' "$TEST_FILE"; then
+  echo "FAIL: integration prompt must invoke the exact internal skill"
+  exit 1
+fi
+
+if ! grep -q 'CLAUDE_STATUS=${PIPESTATUS\[0\]}' "$TEST_FILE"; then
+  echo "FAIL: integration script must preserve the Claude pipeline exit status"
+  exit 1
+fi
+
+if ! grep -q 'SDD_RESUME_FROM_TASK1' "$TEST_FILE" \
+   || ! grep -q -- '--resume-ledger' "$TEST_FILE" \
+   || ! grep -q 'SDD_RESUME_FROM_TASK1=1' "$RESUME_TEST_FILE"; then
+  echo "FAIL: live integration must include a resumable ledger-complete Task 1 case"
+  exit 1
+fi
+
 echo "PASS: integration prompt pins disposable current-branch execution"
 echo "PASS: integration script uses portable timeout helper"
+echo "PASS: integration suite includes a real resumable ledger case"

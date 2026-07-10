@@ -11,12 +11,12 @@ echo " Integration Test: subagent-driven-development"
 echo "========================================"
 echo ""
 echo "This test executes a real plan using the skill and verifies:"
-echo "  1. Plan is read once (not per task)"
-echo "  2. Full task text provided to subagents"
-echo "  3. Subagents perform self-review"
-echo "  4. Spec compliance review before code quality"
-echo "  5. Review loops when issues found"
-echo "  6. Spec reviewer reads code independently"
+echo "  1. Internal docsDev plan is preflighted once"
+echo "  2. Task briefs and reports are file handoffs"
+echo "  3. Subagents record self-review and RED/GREEN evidence"
+echo "  4. One task reviewer returns spec and quality verdicts"
+echo "  5. Progress ledger supports resume"
+echo "  6. Final whole-branch review still runs"
 echo ""
 echo "WARNING: This test may take 10-30 minutes to complete."
 echo ""
@@ -62,7 +62,7 @@ cat > package.json <<'EOF'
 }
 EOF
 
-mkdir -p src test docs/superpowers/plans
+mkdir -p src test docsDev/changes/sdd-integration
 
 cat > CLAUDE.md <<'EOF'
 # Test Harness Notes
@@ -73,12 +73,28 @@ If the Read tool is available despite this instruction, omit the `pages` paramet
 EOF
 
 # Create a simple implementation plan
-cat > docs/superpowers/plans/implementation-plan.md <<'EOF'
+cat > docsDev/changes/sdd-integration/plan.md <<'EOF'
+---
+change_id: sdd-integration
+created_at: 2026-07-10T00:00:00Z
+updated_at: 2026-07-10T00:00:00Z
+owner: test
+---
+
 # Test Implementation Plan
 
 This is a minimal plan to test the subagent-driven-development workflow.
 
+## Global Constraints
+
+- Use Node.js built-in test runner only.
+- Keep the public module path exactly `src/math.js`.
+
 ## Task 1: Create Add Function
+
+**Interfaces:**
+- Consumes: `add(a: number, b: number): number` parameters.
+- Produces: exported `add(a: number, b: number): number`.
 
 Create a function that adds two numbers.
 
@@ -105,6 +121,10 @@ export function add(a, b) {
 **Verification:** `npm test`
 
 ## Task 2: Create Multiply Function
+
+**Interfaces:**
+- Consumes: `multiply(a: number, b: number): number` parameters and Task 1 module.
+- Produces: exported `multiply(a: number, b: number): number`.
 
 Create a function that multiplies two numbers.
 
@@ -139,6 +159,49 @@ git config user.name "Test User"
 git add .
 git commit -m "Initial commit" --quiet
 
+PLUGIN_DIR=$(cd "$SCRIPT_DIR/../.." && pwd)
+EXPECTED_TASKS="1,2"
+REPORT_TASK=1
+RESUME_LEDGER_ARGS=()
+
+if [[ "${SDD_RESUME_FROM_TASK1:-0}" == 1 ]]; then
+    cat > src/math.js <<'EOF'
+export function add(a, b) {
+  return a + b;
+}
+EOF
+    cat > test/math.test.js <<'EOF'
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { add } from '../src/math.js';
+
+test('add', () => {
+  assert.equal(add(2, 3), 5);
+  assert.equal(add(0, 0), 0);
+  assert.equal(add(-1, 1), 0);
+});
+EOF
+    git add src/math.js test/math.test.js
+    git commit -m "Complete Task 1 before resume" --quiet
+
+    SDD_DIR=$("$PLUGIN_DIR/skills/t-subagent-driven-development/scripts/sdd-workspace" \
+        docsDev/changes/sdd-integration/plan.md)
+    cat > "$SDD_DIR/task-1-report.md" <<'EOF'
+# Task 1 report
+
+- Status: complete
+- RED: add tests failed before implementation
+- GREEN: npm test passed after implementation
+- Review: clean
+EOF
+    printf 'Task 1: complete | commits preloaded | tests 3/3 passing | review clean\n' \
+        > "$SDD_DIR/progress.md"
+    cp "$SDD_DIR/progress.md" "$SDD_DIR/resume-ledger-before-run.md"
+    EXPECTED_TASKS="2"
+    REPORT_TASK=2
+    RESUME_LEDGER_ARGS=(--resume-ledger "$SDD_DIR/resume-ledger-before-run.md")
+fi
+
 echo ""
 echo "Project setup complete. Starting execution..."
 echo ""
@@ -149,48 +212,52 @@ OUTPUT_FILE="$TEST_PROJECT/claude-output.txt"
 
 # Create prompt file
 cat > "$TEST_PROJECT/prompt.txt" <<'EOF'
-I want you to execute the implementation plan at docs/superpowers/plans/implementation-plan.md using the subagent-driven-development skill.
+I want you to execute the implementation plan at docsDev/changes/sdd-integration/plan.md using the exact t-superpowers:t-subagent-driven-development skill.
 
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
 1. Read the plan once at the beginning
-2. Provide full task text to subagents (don't make them read files)
-3. Ensure subagents do self-review before reporting
-4. Run spec compliance review before code quality review
-5. Use review loops when issues are found
+2. Use task briefs and report files instead of pasting full task history
+3. Ensure subagents record self-review and RED/GREEN evidence
+4. Use one combined task reviewer with separate spec and quality verdicts
+5. Maintain the progress ledger and run a final whole-branch review
 
 Begin now. Execute the plan.
 EOF
 
 # Note: We use a longer timeout since this is integration testing
 # Use --allowed-tools to enable tool usage in headless mode
-PROMPT="Execute the implementation plan at docs/superpowers/plans/implementation-plan.md using the subagent-driven-development skill.
+PROMPT="Execute the implementation plan at docsDev/changes/sdd-integration/plan.md using the exact t-superpowers:t-subagent-driven-development skill. Invoke that exact skill before doing any implementation work.
 
 This is a disposable test repository created only for this integration test. You have explicit permission to work directly on the current branch. Claude Code may isolate Agent tool work in separate git worktrees; if that happens, merge or cherry-pick the subagent's committed changes back into the current repository before starting the next task or any review. All final implementation files and commits must be present in the current repository directory so the test harness can verify them.
 
 Tool compatibility: Do not use the Read tool in this harness. Use Bash with read-only shell commands such as sed, grep, or python3 to inspect files.
 
+The bundled SDD scripts are at $PLUGIN_DIR/skills/t-subagent-driven-development/scripts/. Invoke those exact scripts; do not invent alternate progress or task-brief directories. The repository may already contain a durable SDD progress ledger; follow the skill's resume contract instead of restarting completed work.
+
 IMPORTANT: Follow the skill exactly. I will be verifying that you:
 1. Read the plan once at the beginning
-2. Provide full task text to subagents (don't make them read files)
-3. Ensure subagents do self-review before reporting
-4. Run spec compliance review before code quality review
-5. Use review loops when issues are found
+2. Use task briefs and report files instead of pasting full task history
+3. Ensure subagents record self-review and RED/GREEN evidence
+4. Use one combined task reviewer with separate spec and quality verdicts
+5. Maintain the progress ledger and run a final whole-branch review
 
 Begin now. Execute the plan."
-
-PLUGIN_DIR=$(cd "$SCRIPT_DIR/../.." && pwd)
 
 # Run claude from inside the test project so its session JSONL lands in a
 # project-specific directory under ~/.claude/projects/, isolated from any
 # other concurrent claude sessions.
 echo "Running Claude (plugin-dir: $PLUGIN_DIR, cwd: $TEST_PROJECT)..."
 echo "================================================================================"
-cd "$TEST_PROJECT" && run_with_timeout 1800 claude -p "$PROMPT" --plugin-dir "$PLUGIN_DIR" --allowed-tools=all --disallowed-tools Read --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE" || {
+set +e
+cd "$TEST_PROJECT" && run_with_timeout 1800 claude -p "$PROMPT" --plugin-dir "$PLUGIN_DIR" --allowed-tools=all --disallowed-tools Read --permission-mode bypassPermissions 2>&1 | tee "$OUTPUT_FILE"
+CLAUDE_STATUS=${PIPESTATUS[0]}
+set -e
+if [ "$CLAUDE_STATUS" -ne 0 ]; then
     echo ""
     echo "================================================================================"
-    echo "EXECUTION FAILED (exit code: $?)"
+    echo "EXECUTION FAILED (exit code: $CLAUDE_STATUS)"
     exit 1
-}
+fi
 echo "================================================================================"
 
 echo ""
@@ -236,7 +303,7 @@ echo ""
 
 # Test 2: Subagents were used (Agent / Task tool — name varies by harness version)
 echo "Test 2: Subagents dispatched..."
-task_count=$(grep -cE '"name":"(Agent|Task)"' "$SESSION_FILE" || echo "0")
+task_count=$(grep -cE '"name":"(Agent|Task)"' "$SESSION_FILE" || true)
 if [ "$task_count" -ge 2 ]; then
     echo "  [PASS] $task_count subagents dispatched"
 else
@@ -245,13 +312,56 @@ else
 fi
 echo ""
 
-# Test 3: TodoWrite was used for tracking
+# Test 3: Harness todo tracking or the durable ledger was used
 echo "Test 3: Task tracking..."
-todo_count=$(grep -c '"name":"TodoWrite"' "$SESSION_FILE" || echo "0")
+todo_count=$(grep -c '"name":"TodoWrite"' "$SESSION_FILE" || true)
 if [ "$todo_count" -ge 1 ]; then
     echo "  [PASS] TodoWrite used $todo_count time(s) for task tracking"
+elif [ -f "$TEST_PROJECT/docsDev/changes/sdd-integration/transcripts/sdd/progress.md" ]; then
+    echo "  [PASS] harness has no TodoWrite calls; durable SDD progress ledger used"
 else
-    echo "  [FAIL] TodoWrite not used"
+    echo "  [FAIL] neither harness todo tracking nor the durable ledger was used"
+    FAILED=$((FAILED + 1))
+fi
+echo ""
+
+# Test 4: Durable file handoffs and ledger were created under docsDev
+echo "Test 4: SDD file handoffs..."
+SDD_DIR="$TEST_PROJECT/docsDev/changes/sdd-integration/transcripts/sdd"
+if [ -f "$SDD_DIR/.gitignore" ] \
+   && [ -f "$SDD_DIR/progress.md" ] \
+   && [ -f "$SDD_DIR/task-$REPORT_TASK-brief.md" ] \
+   && [ -f "$SDD_DIR/task-$REPORT_TASK-report.md" ] \
+   && find "$SDD_DIR" -maxdepth 1 -name 'review-*.diff' -type f | grep -q .; then
+    echo "  [PASS] briefs, reports, review package, and ledger exist under docsDev"
+else
+    echo "  [FAIL] expected SDD handoff artifacts are incomplete under $SDD_DIR"
+    find "$SDD_DIR" -maxdepth 1 -type f -print 2>/dev/null || true
+    FAILED=$((FAILED + 1))
+fi
+if grep -Eq 'RED|Red' "$SDD_DIR/task-$REPORT_TASK-report.md" 2>/dev/null \
+   && grep -Eq 'GREEN|Green' "$SDD_DIR/task-$REPORT_TASK-report.md" 2>/dev/null; then
+    echo "  [PASS] implementer report contains RED/GREEN evidence"
+else
+    echo "  [FAIL] implementer report is missing RED/GREEN evidence"
+    FAILED=$((FAILED + 1))
+fi
+if git -C "$TEST_PROJECT" ls-files docsDev/changes/sdd-integration/transcripts/sdd | grep -q .; then
+    echo "  [FAIL] SDD scratch files were committed"
+    git -C "$TEST_PROJECT" ls-files docsDev/changes/sdd-integration/transcripts/sdd
+    FAILED=$((FAILED + 1))
+else
+    echo "  [PASS] SDD scratch files remain untracked across isolated worktrees"
+fi
+echo ""
+
+# Test 5: Combined task review and final whole-branch review were dispatched
+echo "Test 5: Review topology..."
+if python3 "$SCRIPT_DIR/analyze-sdd-session.py" "$SESSION_FILE" \
+    --tasks "$EXPECTED_TASKS" "${RESUME_LEDGER_ARGS[@]}"; then
+    echo "  [PASS] Agent/Task tool calls prove one combined reviewer per task and one final review"
+else
+    echo "  [FAIL] Agent/Task tool-call topology did not match the SDD contract"
     FAILED=$((FAILED + 1))
 fi
 echo ""
@@ -337,10 +447,10 @@ if [ $FAILED -eq 0 ]; then
     echo ""
     echo "The subagent-driven-development skill correctly:"
     echo "  ✓ Reads plan once at start"
-    echo "  ✓ Provides full task text to subagents"
+    echo "  ✓ Uses file-based task briefs and reports"
     echo "  ✓ Enforces self-review"
-    echo "  ✓ Runs spec compliance before code quality"
-    echo "  ✓ Spec reviewer verifies independently"
+    echo "  ✓ Uses one combined task reviewer with two verdicts"
+    echo "  ✓ Runs a final whole-branch review"
     echo "  ✓ Produces working implementation"
     exit 0
 else

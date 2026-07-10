@@ -148,8 +148,12 @@ echo ">>> Scaffolding project..."
 echo ""
 
 # Prepare the prompt
-PLAN_PATH="$OUTPUT_DIR/project/plan.md"
-PROMPT="Execute this plan using t-superpowers:t-subagent-driven-development. The plan is at: $PLAN_PATH
+if [[ -f "$OUTPUT_DIR/project/docsDev/changes/$TEST_NAME/plan.md" ]]; then
+  PLAN_PATH="$OUTPUT_DIR/project/docsDev/changes/$TEST_NAME/plan.md"
+else
+  PLAN_PATH="$OUTPUT_DIR/project/plan.md"
+fi
+PROMPT="Execute this plan using the exact t-superpowers:t-subagent-driven-development skill, and invoke that exact skill before implementation. The plan is at: $PLAN_PATH
 
 This is a disposable test repository created only for this harness run. You have explicit permission to work directly on the current branch. Claude Code may isolate Agent tool work in .claude/worktrees; if that happens, merge or cherry-pick every subagent commit back into the current repository before starting the next task or any review. The final implementation files and commits must be present in $OUTPUT_DIR/project so the harness can verify them.
 
@@ -157,7 +161,9 @@ Every implementer subagent must commit its completed task before reporting DONE.
 
 For Svelte dev-server checks, use bounded checks only. Prefer npm run build plus static source/module verification. If you start npm run dev, use a short timeout, stop the server yourself, and do not loop indefinitely debugging browser fetches.
 
-Tool compatibility: Do not use the Read tool in this harness. Use Bash with read-only shell commands such as sed, grep, or python3 to inspect files."
+Tool compatibility: Do not use the Read tool in this harness. Use Bash with read-only shell commands such as sed, grep, or python3 to inspect files.
+
+The bundled SDD scripts are at $PLUGIN_DIR/skills/t-subagent-driven-development/scripts/. Invoke those exact scripts; do not invent alternate progress or task-brief directories."
 
 # Run Claude with JSON output for token tracking
 LOG_FILE="$OUTPUT_DIR/claude-output.json"

@@ -14,7 +14,7 @@ echo ""
 # Test 1: Verify skill can be loaded
 echo "Test 1: Skill loading..."
 
-output=$(run_claude "Answer in English. What is the subagent-driven-development skill? Describe its key steps briefly." "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. What are its key steps?" "$CLAUDE_TEST_TIMEOUT")
 
 if assert_contains "$output" "subagent-driven-development\|Subagent-Driven Development\|Subagent Driven" "Skill is recognized"; then
     : # pass
@@ -22,7 +22,7 @@ else
     exit 1
 fi
 
-if assert_contains "$output" "Load Plan\|read.*plan\|extract.*tasks" "Mentions loading plan"; then
+if assert_contains "$output" "plan\|pre.flight" "Mentions plan preflight"; then
     : # pass
 else
     exit 1
@@ -30,12 +30,18 @@ fi
 
 echo ""
 
-# Test 2: Verify skill describes correct workflow order
-echo "Test 2: Workflow ordering..."
+# Test 2: Verify one combined task reviewer returns two verdicts
+echo "Test 2: Combined task review..."
 
-output=$(run_claude "Answer in English. In the subagent-driven-development skill, what comes first: spec compliance review or code quality review? Be specific about the order." "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. How many reviewers are dispatched for each task, and which two separate verdicts must that reviewer return?" "$CLAUDE_TEST_TIMEOUT")
 
-if assert_order "$output" "spec.*compliance" "code.*quality" "Spec compliance before code quality"; then
+if assert_contains "$output" "one\|single\|1" "One task reviewer"; then
+    : # pass
+else
+    exit 1
+fi
+if assert_contains "$output" "spec.*compliance" "Spec compliance verdict" \
+   && assert_contains "$output" "code.*quality\|task.*quality" "Code quality verdict"; then
     : # pass
 else
     exit 1
@@ -46,7 +52,7 @@ echo ""
 # Test 3: Verify self-review is mentioned
 echo "Test 3: Self-review requirement..."
 
-output=$(run_claude "Answer in English. Does the subagent-driven-development skill require implementers to do self-review? What should they check?" "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. Must implementers do self-review, and what should they check?" "$CLAUDE_TEST_TIMEOUT")
 
 if assert_contains "$output" "self-review\|self review" "Mentions self-review"; then
     : # pass
@@ -54,7 +60,7 @@ else
     exit 1
 fi
 
-if assert_contains "$output" "completeness\|requirements\|missed.*spec\|required.*spec" "Checks completeness"; then
+if assert_contains "$output" "tests\|RED\|GREEN\|files changed\|commits" "Records implementation and test evidence"; then
     : # pass
 else
     exit 1
@@ -65,7 +71,7 @@ echo ""
 # Test 4: Verify plan is read once
 echo "Test 4: Plan reading efficiency..."
 
-output=$(run_claude "Answer in English. In subagent-driven-development, how many times should the controller read the plan file? When does this happen?" "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. How many times should the controller scan the full plan, and when?" "$CLAUDE_TEST_TIMEOUT")
 
 if assert_contains "$output" "once\|one time\|single" "Read plan once"; then
     : # pass
@@ -73,7 +79,7 @@ else
     exit 1
 fi
 
-if assert_contains "$output" "Step 1\|beginning\|start\|Load Plan" "Read at beginning"; then
+if assert_contains "$output" "Step 1\|beginning\|start\|before.*Task" "Read before Task 1"; then
     : # pass
 else
     exit 1
@@ -81,10 +87,10 @@ fi
 
 echo ""
 
-# Test 5: Verify spec compliance reviewer is skeptical
-echo "Test 5: Spec compliance reviewer mindset..."
+# Test 5: Verify combined reviewer is skeptical and diff-focused
+echo "Test 5: Task reviewer mindset..."
 
-output=$(run_claude "Answer in English. What is the spec compliance reviewer's attitude toward the implementer's report in subagent-driven-development?" "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. What is the task reviewer's attitude toward the implementer report, and what file does it inspect?" "$CLAUDE_TEST_TIMEOUT")
 
 if assert_contains "$output" "not trust\|don't trust\|skeptical\|verify.*independently\|suspiciously" "Reviewer is skeptical"; then
     : # pass
@@ -92,7 +98,7 @@ else
     exit 1
 fi
 
-if assert_contains "$output" "read.*code\|inspect.*code\|verify.*code\|actual implementation\|plan and the code" "Reviewer reads code"; then
+if assert_contains "$output" "diff\|review package" "Reviewer reads the review package"; then
     : # pass
 else
     exit 1
@@ -103,7 +109,7 @@ echo ""
 # Test 6: Verify review loops
 echo "Test 6: Review loop requirements..."
 
-output=$(run_claude "Answer in English. In subagent-driven-development, what happens if a reviewer finds issues? Is it a one-time review or a loop?" "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. What happens if a task reviewer finds issues: one-time review or loop?" "$CLAUDE_TEST_TIMEOUT")
 
 if assert_contains "$output" "loop\|again\|repeat\|until.*approved\|until.*compliant" "Review loops mentioned"; then
     : # pass
@@ -111,7 +117,7 @@ else
     exit 1
 fi
 
-if assert_contains "$output" "implementer.*fix\|fix.*issues" "Implementer fixes issues"; then
+if assert_contains "$output" "fixer\|fix subagent\|implementer.*fix\|fix.*issues" "A fix agent addresses blocking issues"; then
     : # pass
 else
     exit 1
@@ -119,18 +125,18 @@ fi
 
 echo ""
 
-# Test 7: Verify full task text is provided
-echo "Test 7: Task context provision..."
+# Test 7: Verify task information moves through a brief file
+echo "Test 7: File-based task handoff..."
 
-output=$(run_claude "Answer in English. In subagent-driven-development, how does the controller provide task information to the implementer subagent? Does it make them read a file or provide it directly?" "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. How does the controller provide one task's requirements without pasting the whole plan?" "$CLAUDE_TEST_TIMEOUT")
 
-if assert_contains "$output" "provide.*directly\|full.*text\|paste\|include.*prompt" "Provides text directly"; then
+if assert_contains "$output" "task.*brief\|brief.*file\|task-brief" "Provides a task brief file"; then
     : # pass
 else
     exit 1
 fi
 
-if assert_contains "$output" "not.*read.*plan.*file\|does not.*read.*plan.*file\|do not.*read.*plan.*file\|don't.*read.*plan.*file" "Doesn't make subagent read the plan file"; then
+if assert_contains "$output" "not.*whole.*plan\|does not.*read.*plan\|don't.*paste.*plan\|never.*paste.*plan" "Doesn't hand over the whole plan"; then
     : # pass
 else
     exit 1
@@ -141,7 +147,7 @@ echo ""
 # Test 8: Verify worktree requirement
 echo "Test 8: Worktree requirement..."
 
-output=$(run_claude "Answer in English. What workflow skills are required before using subagent-driven-development? List any prerequisites or required skills." "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. What workflow skills are required before using it?" "$CLAUDE_TEST_TIMEOUT")
 
 if assert_contains "$output" "using-git-worktrees\|worktree" "Mentions worktree requirement"; then
     : # pass
@@ -154,9 +160,22 @@ echo ""
 # Test 9: Verify main branch warning
 echo "Test 9: Main branch red flag..."
 
-output=$(run_claude "Answer in English. In subagent-driven-development, is it okay to start implementation directly on the main branch?" "$CLAUDE_TEST_TIMEOUT")
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. Is it okay to start directly on main?" "$CLAUDE_TEST_TIMEOUT")
 
 if assert_contains "$output" "worktree\|feature.*branch\|not.*main\|never.*main\|avoid.*main\|don't.*main\|consent\|permission" "Warns against main branch"; then
+    : # pass
+else
+    exit 1
+fi
+
+echo ""
+
+# Test 10: Verify final whole-branch review remains mandatory
+echo "Test 10: Final whole-branch review..."
+
+output=$(run_claude "Use the t-superpowers:t-subagent-driven-development skill before answering. Answer in English. After every task passes its task review, what review still must run?" "$CLAUDE_TEST_TIMEOUT")
+
+if assert_contains "$output" "final.*whole.branch\|whole.branch.*review\|broad.*final.*review" "Requires final whole-branch review"; then
     : # pass
 else
     exit 1

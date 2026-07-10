@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Generate one fail-closed, multi-commit review package for an internal plan.
+# Usage: review-package PLAN_FILE BASE HEAD [OUTFILE]
+set -euo pipefail
+
+if [[ $# -lt 3 || $# -gt 4 ]]; then
+  printf 'usage: review-package PLAN_FILE BASE HEAD [OUTFILE]\n' >&2
+  exit 2
+fi
+
+plan_arg=$1
+base_arg=$2
+head_arg=$3
+script_dir=$(cd "$(dirname "$0")" && pwd -P)
+workspace=$("$script_dir/sdd-workspace" "$plan_arg")
+plan_dir=$(cd "$(dirname "$plan_arg")" && pwd -P)
+plan="$plan_dir/plan.md"
+root=$(git -C "$plan_dir" rev-parse --show-toplevel)
+root=$(cd "$root" && pwd -P)
+
+base=$(git -C "$root" rev-parse --verify --quiet "${base_arg}^{commit}") || {
+  printf 'bad BASE commit: %s\n' "$base_arg" >&2
+  exit 2
+}
+head=$(git -C "$root" rev-parse --verify --quiet "${head_arg}^{commit}") || {
+  printf 'bad HEAD commit: %s\n' "$head_arg" >&2
+  exit 2
+}
+[[ "$base" != "$head" ]] || {
+  printf 'BASE and HEAD resolve to the same commit; there is no task diff to review\n' >&2
+  exit 2
+}
+git -C "$root" merge-base --is-ancestor "$base" "$head" || {
+  printf 'BASE must be an ancestor of HEAD: %s is not before %s\n' "$base_arg" "$head_arg" >&2
+  exit 2
+}
+
+if [[ $# -eq 4 ]]; then
+  out_arg=$4
+  out_dir=$(dirname "$out_arg")
+  [[ -d "$out_dir" ]] || {
+    printf 'output directory does not exist: %s\n' "$out_dir" >&2
+    exit 2
+  }
+  out_dir=$(cd "$out_dir" && pwd -P)
+  out="$out_dir/$(basename "$out_arg")"
+else
+  base_short=$(git -C "$root" rev-parse --short "$base")
+  head_short=$(git -C "$root" rev-parse --short "$head")
+  out="$workspace/review-${base_short}..${head_short}.diff"
+  out_dir=$workspace
+fi
+
+tmp=$(mktemp "$out_dir/.review-package.XXXXXX")
+cleanup() {
+  rm -f "$tmp"
+}
+trap cleanup EXIT
+
+{
+  printf '# Review package: %s..%s\n\n' "$base" "$head"
+  printf 'Plan: %s\n\n' "$plan"
+  printf '## Commits\n\n'
+  git -C "$root" log --oneline "$base..$head"
+  printf '\n## Files changed\n\n'
+  git -C "$root" diff --stat --no-ext-diff "$base..$head"
+  printf '\n## Diff\n\n'
+  git -C "$root" diff --no-ext-diff --binary -U10 "$base..$head"
+} > "$tmp"
+
+mv -f "$tmp" "$out"
+printf '%s\n' "$out"

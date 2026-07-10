@@ -12,8 +12,9 @@ cd "$TARGET_DIR"
 
 git init
 
-cp "$SCRIPT_DIR/design.md" .
-cp "$SCRIPT_DIR/plan.md" .
+mkdir -p docsDev/changes/t-smoke
+cp "$SCRIPT_DIR/design.md" docsDev/changes/t-smoke/spec.md
+cp "$SCRIPT_DIR/plan.md" docsDev/changes/t-smoke/plan.md
 
 cat > CLAUDE.md << 'EOF'
 # Test Harness Notes
@@ -50,4 +51,4 @@ git commit -m "Initial t-smoke project setup"
 echo "Scaffolded t-smoke project at: $TARGET_DIR"
 echo ""
 echo "To run the test:"
-echo "  claude -p \"Execute this plan using t-superpowers:t-subagent-driven-development. Plan: $TARGET_DIR/plan.md\" --plugin-dir /path/to/superpowers"
+echo "  claude -p \"Execute this plan using t-superpowers:t-subagent-driven-development. Plan: $TARGET_DIR/docsDev/changes/t-smoke/plan.md\" --plugin-dir /path/to/superpowers"

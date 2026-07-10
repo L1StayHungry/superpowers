@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# Resolve the ignored workspace for one internal docsDev implementation plan.
+# Usage: sdd-workspace PLAN_FILE
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  printf 'usage: sdd-workspace PLAN_FILE\n' >&2
+  exit 2
+fi
+
+plan_arg=$1
+[[ -f "$plan_arg" ]] || {
+  printf 'no such plan file: %s\n' "$plan_arg" >&2
+  exit 2
+}
+[[ ! -L "$plan_arg" ]] || {
+  printf 'plan must be a regular file, not a symlink: %s\n' "$plan_arg" >&2
+  exit 2
+}
+
+plan_dir=$(cd "$(dirname "$plan_arg")" && pwd -P)
+plan_name=$(basename "$plan_arg")
+[[ "$plan_name" == plan.md ]] || {
+  printf 'external plans must first be associated or copied to docsDev/changes/<change-id>/plan.md\n' >&2
+  exit 2
+}
+
+root=$(git -C "$plan_dir" rev-parse --show-toplevel 2>/dev/null) || {
+  printf 'plan is not inside a git worktree: %s\n' "$plan_arg" >&2
+  exit 2
+}
+root=$(cd "$root" && pwd -P)
+caller_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  printf 'run sdd-workspace from the worktree that owns PLAN_FILE\n' >&2
+  exit 2
+}
+caller_root=$(cd "$caller_root" && pwd -P)
+[[ "$caller_root" == "$root" ]] || {
+  printf 'PLAN_FILE belongs to a different worktree: caller=%s plan=%s\n' "$caller_root" "$root" >&2
+  exit 3
+}
+changes_root="$root/docsDev/changes"
+
+case "$plan_dir" in
+  "$changes_root"/*) change_id=${plan_dir#"$changes_root"/} ;;
+  *)
+    printf 'external plans must first be associated or copied to docsDev/changes/<change-id>/plan.md\n' >&2
+    exit 2
+    ;;
+esac
+
+if [[ -z "$change_id" || "$change_id" == */* ]]; then
+  printf 'plan must be exactly docsDev/changes/<change-id>/plan.md\n' >&2
+  exit 2
+fi
+
+transcripts="$plan_dir/transcripts"
+[[ ! -L "$transcripts" ]] || {
+  printf 'refusing symlinked SDD transcripts directory: %s\n' "$transcripts" >&2
+  exit 3
+}
+mkdir -p "$transcripts"
+transcripts_real=$(cd "$transcripts" && pwd -P)
+[[ "$transcripts_real" == "$transcripts" ]] || {
+  printf 'SDD transcripts directory escaped its change: %s -> %s\n' "$transcripts" "$transcripts_real" >&2
+  exit 3
+}
+
+workspace="$transcripts/sdd"
+[[ ! -L "$workspace" ]] || {
+  printf 'refusing symlinked SDD workspace: %s\n' "$workspace" >&2
+  exit 3
+}
+mkdir -p "$workspace"
+workspace_real=$(cd "$workspace" && pwd -P)
+[[ "$workspace_real" == "$workspace" ]] || {
+  printf 'SDD workspace escaped its change: %s -> %s\n' "$workspace" "$workspace_real" >&2
+  exit 3
+}
+
+# A nested untracked .gitignore is not present in an isolated linked worktree.
+# Put the generic scratch rule in the shared Git common directory as well, so
+# implementer worktrees cannot accidentally commit reports or review packages.
+common_dir=$(git -C "$root" rev-parse --git-common-dir)
+if [[ "$common_dir" != /* ]]; then
+  common_dir="$root/$common_dir"
+fi
+common_dir=$(cd "$common_dir" && pwd -P)
+common_info="$common_dir/info"
+mkdir -p "$common_info"
+common_exclude="$common_info/exclude"
+[[ ! -L "$common_exclude" ]] || {
+  printf 'refusing symlinked Git common exclude: %s\n' "$common_exclude" >&2
+  exit 3
+}
+if [[ -e "$common_exclude" && ! -f "$common_exclude" ]]; then
+  printf 'refusing non-regular Git common exclude: %s\n' "$common_exclude" >&2
+  exit 3
+fi
+common_rule='/docsDev/changes/*/transcripts/sdd/'
+if [[ ! -f "$common_exclude" ]] || ! grep -Fqx -- "$common_rule" "$common_exclude"; then
+  umask 077
+  common_tmp=$(mktemp "$common_info/exclude.XXXXXX")
+  cleanup_common() {
+    rm -f "$common_tmp"
+  }
+  trap cleanup_common EXIT
+  if [[ -f "$common_exclude" ]]; then
+    cp "$common_exclude" "$common_tmp"
+    [[ ! -s "$common_tmp" ]] || printf '\n' >> "$common_tmp"
+  fi
+  printf '%s\n' "$common_rule" >> "$common_tmp"
+  [[ ! -L "$common_exclude" ]] || {
+    printf 'refusing symlinked Git common exclude: %s\n' "$common_exclude" >&2
+    exit 3
+  }
+  mv -f "$common_tmp" "$common_exclude"
+  trap - EXIT
+fi
+
+ignore="$workspace/.gitignore"
+[[ ! -L "$ignore" ]] || {
+  printf 'refusing symlinked SDD ignore file: %s\n' "$ignore" >&2
+  exit 3
+}
+if [[ -e "$ignore" && ! -f "$ignore" ]]; then
+  printf 'refusing non-regular SDD ignore path: %s\n' "$ignore" >&2
+  exit 3
+fi
+umask 077
+ignore_tmp=$(mktemp "$workspace/.gitignore.XXXXXX")
+cleanup() {
+  rm -f "$ignore_tmp"
+}
+trap cleanup EXIT
+printf '*\n' > "$ignore_tmp"
+[[ ! -L "$ignore" ]] || {
+  printf 'refusing symlinked SDD ignore file: %s\n' "$ignore" >&2
+  exit 3
+}
+if [[ -e "$ignore" && ! -f "$ignore" ]]; then
+  printf 'refusing non-regular SDD ignore path: %s\n' "$ignore" >&2
+  exit 3
+fi
+mv -f "$ignore_tmp" "$ignore"
+trap - EXIT
+printf '%s\n' "$workspace"

@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Extract a task and its binding constraints into an ignored handoff file.
+# Usage: task-brief PLAN_FILE TASK_NUMBER [OUTFILE]
+set -euo pipefail
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  printf 'usage: task-brief PLAN_FILE TASK_NUMBER [OUTFILE]\n' >&2
+  exit 2
+fi
+
+plan_arg=$1
+task_number=$2
+[[ "$task_number" =~ ^[1-9][0-9]*$ ]] || {
+  printf 'TASK_NUMBER must be a positive integer: %s\n' "$task_number" >&2
+  exit 2
+}
+
+script_dir=$(cd "$(dirname "$0")" && pwd -P)
+workspace=$("$script_dir/sdd-workspace" "$plan_arg")
+plan_dir=$(cd "$(dirname "$plan_arg")" && pwd -P)
+plan="$plan_dir/plan.md"
+
+if [[ $# -eq 3 ]]; then
+  out_arg=$3
+  out_dir=$(dirname "$out_arg")
+  [[ -d "$out_dir" ]] || {
+    printf 'output directory does not exist: %s\n' "$out_dir" >&2
+    exit 2
+  }
+  out_dir=$(cd "$out_dir" && pwd -P)
+  out="$out_dir/$(basename "$out_arg")"
+else
+  out="$workspace/task-${task_number}-brief.md"
+  out_dir=$workspace
+fi
+
+task_tmp=$(mktemp "$out_dir/.task-${task_number}.XXXXXX")
+out_tmp=$(mktemp "$out_dir/.brief-${task_number}.XXXXXX")
+cleanup() {
+  rm -f "$task_tmp" "$out_tmp"
+}
+trap cleanup EXIT
+
+awk -v n="$task_number" '
+  /^```/ { in_fence = !in_fence }
+  !in_fence && /^#+[ \t]+/ {
+    heading = $0
+    hashes = heading
+    sub(/[ \t].*$/, "", hashes)
+    level = length(hashes)
+    is_target = (heading ~ ("^#+[ \t]+Task[ \t]+" n "([^0-9]|$)"))
+    if (in_task && level <= task_level) exit
+    if (is_target) {
+      in_task = 1
+      task_level = level
+    }
+  }
+  in_task { print }
+' "$plan" > "$task_tmp"
+
+[[ -s "$task_tmp" ]] || {
+  printf "task %s not found in %s (expected a heading like 'Task %s')\n" "$task_number" "$plan" "$task_number" >&2
+  exit 3
+}
+
+constraints_source=none
+constraints_file=$plan
+if awk '
+  /^```/ { in_fence = !in_fence }
+  !in_fence && /^##[ \t]+Global Constraints[ \t]*$/ { found = 1; exit }
+  END { exit(found ? 0 : 1) }
+' "$plan"; then
+  constraints_source=plan
+else
+  spec="$plan_dir/spec.md"
+  [[ ! -L "$spec" ]] || {
+    printf 'refusing symlinked legacy spec: %s\n' "$spec" >&2
+    exit 3
+  }
+  if [[ -f "$spec" ]] && awk '
+    /^```/ { in_fence = !in_fence }
+    !in_fence && /^##[ \t]+Global Constraints[ \t]*$/ { found = 1; exit }
+    END { exit(found ? 0 : 1) }
+  ' "$spec"; then
+    constraints_source=spec
+    constraints_file=$spec
+  fi
+fi
+
+if grep -Eq '^\*\*Interfaces:\*\*[[:space:]]*$|^#+[[:space:]]+Interfaces[[:space:]]*$' "$task_tmp"; then
+  interfaces=present
+else
+  interfaces=missing
+fi
+
+{
+  printf '<!-- sdd-source-plan: %s -->\n' "$plan"
+  printf '<!-- global-constraints-source: %s -->\n' "$constraints_source"
+  printf '<!-- interfaces: %s -->\n\n' "$interfaces"
+  printf '# SDD Task Brief %s\n\n' "$task_number"
+  printf '## Global Constraints\n\n'
+  if [[ "$constraints_source" == none ]]; then
+    printf '_No Global Constraints section was declared in the plan or same-directory spec._\n'
+  else
+    awk '
+      /^```/ { in_fence = !in_fence }
+      !in_fence && /^##[ \t]+Global Constraints[ \t]*$/ { in_section = 1; next }
+      in_section && !in_fence && /^#+[ \t]+/ { exit }
+      in_section { print }
+    ' "$constraints_file"
+  fi
+  printf '\n## Task Requirements\n\n'
+  cat "$task_tmp"
+} > "$out_tmp"
+
+mv -f "$out_tmp" "$out"
+printf '%s\n' "$out"

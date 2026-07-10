@@ -1,16 +1,22 @@
 # Implementer Subagent Prompt Template
 
-Use this template when dispatching an implementer subagent.
+Use this template when dispatching an implementer subagent. Requirements and
+detailed results move through files so the controller retains only compact
+status information.
 
 ```
-Task tool (general-purpose):
+Implementer subagent:
   description: "Implement Task N: [task name]"
-  prompt: |
+  model: [EXPLICIT_IMPLEMENTER_MODEL, only when the harness supports this field]
+  instructions: |
     You are implementing Task N: [task name]
 
     ## Task Description
 
-    [FULL TEXT of task from plan - paste it here, don't make subagent read file]
+    Read this first: [BRIEF_FILE]
+
+    The brief is your requirements source and contains exact values copied
+    from the plan or spec. Do not ask the controller to paste the full plan.
 
     ## Context
 
@@ -34,7 +40,8 @@ Task tool (general-purpose):
     3. Verify implementation works
     4. Commit your work
     5. Self-review (see below)
-    6. Report back
+    6. Write the full report and RED/GREEN evidence to [REPORT_FILE]
+    7. Report back compactly
 
     Work from: [directory]
 
@@ -94,18 +101,34 @@ Task tool (general-purpose):
     - Do tests actually verify behavior (not just mock behavior)?
     - Did I follow TDD if required?
     - Are tests comprehensive?
+    - Is output pristine, with no unexplained warnings or noise?
 
     If you find issues during self-review, fix them now before reporting.
 
-    ## Report Format
+    ## Report File
 
-    When done, report:
+    Write the full report to [REPORT_FILE]:
+    - What you implemented (or attempted if blocked)
+    - Files changed and commits created
+    - Tests and exact results
+    - TDD Evidence when TDD applies:
+      - RED: command, relevant expected failing output, and why it failed
+      - GREEN: command and relevant passing output
+    - Self-review findings
+    - Issues or concerns
+
+    If you later fix review findings, append the fix and its focused test
+    evidence to the same report file.
+
+    Return only:
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-    - What you implemented (or what you attempted, if blocked)
-    - What you tested and test results
-    - Files changed
-    - Self-review findings (if any)
-    - Any issues or concerns
+    - Commit SHA(s) and subjects
+    - One-line test summary
+    - Concerns, if any
+    - [REPORT_FILE]
+
+    Keep the returned summary under 15 lines. The report file is the durable
+    handoff; do not print its full contents into the controller context.
 
     Use DONE_WITH_CONCERNS if you completed the work but have doubts about correctness.
     Use BLOCKED if you cannot complete the task. Use NEEDS_CONTEXT if you need
