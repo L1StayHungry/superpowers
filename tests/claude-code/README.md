@@ -92,6 +92,17 @@ Tests skill content and requirements (~2 minutes):
 - Review loops documented
 - Task context provision documented
 
+#### test-writing-plans-contract.sh
+Deterministic planning contract test (<5 seconds):
+- Narrow complex-work trigger and `docsDev` output path
+- Verbatim Global Constraints copied from the approved spec
+- Exact per-task Consumes/Produces interfaces
+- Reviewable task sizing, TDD, namespace, frontmatter, and Archive Patch contracts
+
+The checked plan/spec samples are structural fixtures, not generated executable plans. They validate Global Constraints, exact/N/A Interfaces, and both task-boundary directions; live model RED/GREEN evidence is retained in the change transcripts and does not run in CI.
+
+Run it directly with `bash test-writing-plans-contract.sh`, or through the fast suite with `./run-skill-tests.sh --test test-writing-plans-contract.sh --timeout 5`.
+
 ### Integration Tests (use --integration flag)
 
 #### test-subagent-driven-development-integration.sh

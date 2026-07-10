@@ -60,6 +60,8 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Tests:"
             echo "  test-subagent-driven-development.sh  Test skill loading and requirements"
+            echo "  test-writing-plans-contract.sh       Test planning contract and local artifacts"
+            echo "  test-worktree-finishing-contract.sh  Test local worktree and forge-neutral finishing contracts"
             echo ""
             echo "Integration Tests (use --integration):"
             echo "  test-subagent-driven-development-integration.sh  Full workflow execution"
@@ -100,11 +102,15 @@ except subprocess.TimeoutExpired:
 # List of skill tests to run (fast unit tests)
 tests=(
     "test-subagent-driven-development.sh"
+    "test-sdd-workspace.sh"
+    "test-writing-plans-contract.sh"
+    "test-worktree-finishing-contract.sh"
 )
 
 # Integration tests (slow, full execution)
 integration_tests=(
     "test-subagent-driven-development-integration.sh"
+    "test-subagent-driven-development-resume-integration.sh"
     "test-requesting-code-review.sh"
 )
 

@@ -1,6 +1,6 @@
 ---
 name: t-finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
+description: Use when implementation is complete, all tests pass, and you need to decide how to integrate, preserve, or discard the development branch
 ---
 
 # Finishing a Development Branch
@@ -30,7 +30,7 @@ Tests failing (<N> failures). Must fix before completing:
 
 [Show failures]
 
-Cannot proceed with merge/PR until tests pass.
+Cannot proceed with merge or change-request options until tests pass.
 ```
 
 Stop. Don't proceed to Step 2.
@@ -305,7 +305,7 @@ Use `INTEGRATION_BRANCH` for `<base-branch>` in the menu and local merge command
 Implementation complete. What would you like to do?
 
 1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
+2. Push and create a change request (PR/MR)
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
 
@@ -317,7 +317,7 @@ Which option?
 ```
 Implementation complete. You're on a detached HEAD (externally managed workspace).
 
-1. Push as new branch and create a Pull Request
+1. Push as a new branch and create a change request (PR/MR)
 2. Keep as-is (I'll handle it later)
 3. Discard this work
 
@@ -352,24 +352,29 @@ Then: Cleanup worktree (Step 7), then delete branch:
 git branch -d <feature-branch>
 ```
 
-#### Option 2: Push and Create PR
+#### Push And Create A Change Request
+
+Only execute this path after the user explicitly selects standard-menu Option 2, detached-HEAD-menu Option 1, or
+gives an equivalent direct push/change-request instruction. That choice authorizes the following non-force push and
+forge-tool step; it does not authorize any other branch or remote mutation.
 
 ```bash
-# Push branch
+# Push a named branch safely and establish its upstream.
 git push -u origin <feature-branch>
-
-# Create PR
-gh pr create --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<2-3 bullets of what changed>
-
-## Test Plan
-- [ ] <verification steps>
-EOF
-)"
 ```
 
-**Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.
+For a detached HEAD, first agree on `<new-branch>` with the user, then push without force:
+
+```bash
+git push -u origin HEAD:refs/heads/<new-branch>
+```
+
+After the push succeeds, use an available forge tool or integration exposed by the current harness to create the
+pull request or merge request. Pass the verified summary and test evidence to that tool. Do not assume a provider,
+invent a shell command, or invoke a hardcoded hosting CLI. If no forge tool is available, stop after the push and
+report the upstream branch plus the missing capability; do not claim that a change request was created.
+
+**Do NOT clean up worktree** — user needs it alive to iterate on change-request feedback.
 
 #### Option 3: Keep As-Is
 
@@ -414,7 +419,7 @@ WORKTREE_PATH=$(git rev-parse --show-toplevel)
 
 **If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
 
-**If worktree path is under `.worktrees/`, `worktrees/`, or `~/.config/superpowers/worktrees/`:** Superpowers created this worktree — we own cleanup.
+**If worktree path is under this repository's `.worktrees/` or `worktrees/`:** t-superpowers created this worktree — we own cleanup.
 
 ```bash
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
@@ -430,7 +435,7 @@ git worktree prune  # Self-healing: clean up any stale registrations
 | Option | Merge | Push | Keep Worktree | Cleanup Branch |
 |--------|-------|------|---------------|----------------|
 | 1. Merge locally | yes | - | - | yes |
-| 2. Create PR | - | yes | yes | - |
+| 2. Create change request | - | yes | yes | - |
 | 3. Keep as-is | - | - | yes | - |
 | 4. Discard | - | - | - | yes (force) |
 
@@ -461,7 +466,7 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - **Fix:** Present exactly 4 structured options (or 3 for detached HEAD)
 
 **Cleaning up worktree for Option 2**
-- **Problem:** Remove worktree user needs for PR iteration
+- **Problem:** Remove worktree user needs for change-request iteration
 - **Fix:** Only cleanup for Options 1 and 4
 
 **Deleting branch before removing worktree**
@@ -474,7 +479,11 @@ git worktree prune  # Self-healing: clean up any stale registrations
 
 **Cleaning up harness-owned worktrees**
 - **Problem:** Removing a worktree the harness created causes phantom state
-- **Fix:** Only clean up worktrees under `.worktrees/`, `worktrees/`, or `~/.config/superpowers/worktrees/`
+- **Fix:** Only clean up worktrees under this repository's `.worktrees/` or `worktrees/`
+
+**Hardcoding a forge provider**
+- **Problem:** A provider-specific CLI fails on another forge or in a harness without that executable
+- **Fix:** Push safely, then use an available forge tool exposed by the current harness; if none is available, report the pushed branch and stop
 
 **No confirmation for discard**
 - **Problem:** Accidentally delete work
@@ -492,8 +501,10 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - Reorganize commits while `git status --short` is not clean
 - Reorganize commits when remote refs cannot be refreshed
 - Reorganize commits when any feature commit is already on a remote branch
-- Continue to merge/PR options after failed or dirty commit reorganization
+- Continue to merge or change-request options after failed or dirty commit reorganization
 - Let `t-git-commit` run reset, rebase, checkout, clean, stash, or force-push during finishing
+- Push or invoke a forge integration before the user selects the corresponding finishing option
+- Assume a GitHub-specific, GitLab-specific, or other provider-specific CLI is available
 - Remove a worktree before confirming merge success
 - Clean up worktrees you didn't create (provenance check)
 - Run `git worktree remove` from inside the worktree
@@ -508,6 +519,7 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - Record `ORIG` and `ORIG_TREE` before soft reset
 - Verify clean status and tree equality after commit reorganization
 - Present exactly 4 options (or 3 for detached HEAD)
+- Use the current harness's available forge tool for pull request or merge request creation
 - Get typed confirmation for Option 4
 - Clean up worktree for Options 1 & 4 only
 - `cd` to main repo root before worktree removal

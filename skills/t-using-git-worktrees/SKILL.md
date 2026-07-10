@@ -1,6 +1,6 @@
 ---
 name: t-using-git-worktrees
-description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback
+description: Use when starting complex feature work that needs isolation from the current workspace or before executing a multi-step implementation plan
 ---
 
 # Using Git Worktrees
@@ -73,37 +73,29 @@ Follow this priority order. Explicit user preference always beats observed files
    ```
    If found, use it. If both exist, `.worktrees` wins.
 
-3. **Check for an existing global directory:**
-   ```bash
-   project=$(basename "$(git rev-parse --show-toplevel)")
-   ls -d ~/.config/superpowers/worktrees/$project 2>/dev/null
-   ```
-   If found, use it (backward compatibility with legacy global path).
+3. **If there is no other guidance available**, default to `.worktrees/` at the project root.
 
-4. **If there is no other guidance available**, default to `.worktrees/` at the project root.
+#### Safety Verification
 
-#### Safety Verification (project-local directories only)
-
-**MUST verify directory is ignored before creating worktree:**
+**For every selected location inside the repository, MUST verify that exact directory is ignored before creating a
+worktree:**
 
 ```bash
-git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/dev/null
+git check-ignore -q "${LOCATION%/}/" 2>/dev/null
 ```
 
 **If NOT ignored:** Add to .gitignore, commit the change, then proceed.
 
 **Why critical:** Prevents accidentally committing worktree contents to repository.
 
-Global directories (`~/.config/superpowers/worktrees/`) need no verification.
+An explicit absolute location outside the repository is user-owned and cannot pollute this repository's index, so
+the repository gitignore check does not apply. Its explicit selection does not make it cleanup-owned in this skill.
 
 #### Create the Worktree
 
 ```bash
-project=$(basename "$(git rev-parse --show-toplevel)")
-
-# Determine path based on chosen location
-# For project-local: path="$LOCATION/$BRANCH_NAME"
-# For global: path="~/.config/superpowers/worktrees/$project/$BRANCH_NAME"
+# Determine the path under the selected location.
+path="$LOCATION/$BRANCH_NAME"
 
 git worktree add "$path" -b "$BRANCH_NAME"
 cd "$path"
@@ -163,7 +155,6 @@ Ready to implement <feature-name>
 | `worktrees/` exists | Use it (verify ignored) |
 | Both exist | Use `.worktrees/` |
 | Neither exists | Check instruction file, then default `.worktrees/` |
-| Global path exists | Use it (backward compat) |
 | Directory not ignored | Add to .gitignore + commit |
 | Permission error on create | Sandbox fallback, work in place |
 | Tests fail during baseline | Report failures + ask |
@@ -189,7 +180,7 @@ Ready to implement <feature-name>
 ### Assuming directory location
 
 - **Problem:** Creates inconsistency, violates project conventions
-- **Fix:** Follow priority: existing > global legacy > instruction file > default
+- **Fix:** Follow priority: explicit instructions > existing project-local directory > default
 
 ### Proceeding with failing tests
 
@@ -209,7 +200,7 @@ Ready to implement <feature-name>
 **Always:**
 - Run Step 0 detection first
 - Prefer native tools over git fallback
-- Follow directory priority: existing > global legacy > instruction file > default
+- Follow directory priority: explicit instructions > existing project-local directory > default
 - Verify directory is ignored for project-local
 - Auto-detect and run project setup
 - Verify clean test baseline

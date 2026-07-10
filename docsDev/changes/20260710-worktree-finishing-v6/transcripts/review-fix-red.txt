@@ -1,0 +1,19 @@
+Baseline source: `40c064d:skills/t-using-git-worktrees/SKILL.md`
+
+Command: materialize that baseline skill to a temporary file, then run
+`WORKTREE_SKILL="$tmp_skill" bash tests/claude-code/test-worktree-finishing-contract.sh`
+
+Exit: 1
+
+Expected failures:
+
+- baseline skill uses `git check-ignore -q "$LOCATION"` instead of the directory-semantic
+  `git check-ignore -q "${LOCATION%/}/"` probe.
+- the baseline skill's actual probe returns non-zero for the absent `.worktrees` path even though `.gitignore`
+  contains `.worktrees/`.
+
+Behavior fixture evidence:
+
+- both `.worktrees` and `worktrees` were absent;
+- the old skill probe failed to match `.worktrees/` against the `.worktrees/` rule;
+- the same probe returned non-zero for absent, unignored `worktrees/` as required.

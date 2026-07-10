@@ -1,0 +1,14 @@
+Command: bash tests/claude-code/test-worktree-finishing-contract.sh
+Exit: 1
+
+Expected failures: 5
+
+- t-using-git-worktrees still contains the legacy global worktree fallback.
+- t-finishing-a-development-branch still treats the legacy global path as cleanup-owned.
+- t-finishing-a-development-branch still hardcodes `gh pr create`.
+- t-finishing-a-development-branch has no available-forge-tool contract.
+- t-finishing-a-development-branch has no provider-neutral change-request terminology.
+
+All preserved 5314938 safety assertions passed: integration branch/fork base/fork point,
+remote refresh, shared commit detection, explicit soft-reset confirmation,
+`t-git-commit` add/commit-only scope, and final tree equivalence.

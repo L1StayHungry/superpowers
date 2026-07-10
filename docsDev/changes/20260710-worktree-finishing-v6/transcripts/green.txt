@@ -1,0 +1,31 @@
+Command: `bash tests/claude-code/test-worktree-finishing-contract.sh`
+Exit: 0
+Key output: `PASSED: worktree and finishing contracts`; the skill's actual probe matched absent `.worktrees/` against the `.worktrees/` rule, while absent unignored `worktrees/` was rejected.
+
+Command: `bash tests/claude-code/run-skill-tests.sh --test test-worktree-finishing-contract.sh --verbose`
+Exit: 0
+Key output: `Passed: 1`, `Failed: 0`, `STATUS: PASSED`.
+
+Command: `bash tools/t-stage1-check.sh`
+Exit: 0
+Key output: `OK: Stage 1 migration self-check passed`.
+
+Command: `npm run test:npm-installer`
+Exit: 0
+Key output: `tests 67`, `pass 67`, `fail 0`.
+
+Command: `npm run build`
+Exit: 0
+Key output: `node scripts/build-npm-package.mjs` completed without errors.
+
+Command: `npm run pack:dry-run`
+Exit: 0
+Key output: package `@4399/tdata-t-superpowers@5.1.1`, `total files: 72`.
+
+Command: `bash -n tests/claude-code/test-worktree-finishing-contract.sh tests/claude-code/run-skill-tests.sh`
+Exit: 0
+Key output: no syntax errors.
+
+Command: `git diff --check`
+Exit: 0
+Key output: no whitespace errors.
