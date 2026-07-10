@@ -36,4 +36,22 @@ Temp project: `/tmp/tdata-tsp-release.clz39H`
 ## Notes
 
 - Root `package.json` retains `name: "superpowers"` and `main: ".opencode/plugins/superpowers.js"`.
-- Real `npm publish` awaits explicit user confirmation (“发布”).
+- Release commit: `bf83b10`.
+
+## Real publish
+
+| Check | Result |
+|---|---|
+| `npm publish ./dist/npm-package` | PASS — `+ @4399/tdata-t-superpowers@6.0.0` |
+| `npm view @4399/tdata-t-superpowers@6.0.0 version` | `6.0.0` |
+| `npm dist-tag ls` after publish | `latest: 6.0.0` |
+
+## Registry install smoke
+
+Temp project: `/tmp/tdata-tsp-registry.3if20t`
+
+| Target | Result |
+|---|---|
+| Cursor `install` / `doctor` | PASS — 15 `t-*` skills |
+| Codex `install` / `doctor` | Expected WARN — session-start hook not installed by skills adapter; 15 managed `t-*` skills |
+| Claude `install --dry-run` | PASS — would generate marketplace only |
