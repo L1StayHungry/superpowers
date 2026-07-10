@@ -10,34 +10,33 @@ Help turn ideas into fully formed designs and specs through natural collaborativ
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
 
 <HARD-GATE>
-Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to every legitimately triggered complex project, regardless of perceived simplicity within that complex scope.
 </HARD-GATE>
 
-## Anti-Pattern: "This Is Too Simple To Need A Design"
+## Anti-Pattern: Skipping Design After a Legitimate Trigger
 
-Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+Once this skill legitimately triggers for complex work, do not skip design because one part looks straightforward. Requests excluded by the frontmatter trigger boundary stay in the normal agent flow and never enter this process.
 
 ## Checklist
 
 You MUST create a task for each of these items and complete them in order:
 
 1. **Explore project context** — check files, docs, recent commits
-2. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
-3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-4. **Propose 2-3 approaches** — with trade-offs and your recommendation
-5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docsDev/changes/<change-id>/spec.md` and commit
-7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docsDev/changes/<change-id>/spec.md` and commit
+6. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
+7. **User reviews written spec** — ask user to review the spec file before proceeding
+8. **Transition to implementation** — invoke `t-superpowers:t-writing-plans` to create the implementation plan
+
+The visual companion is an ongoing conditional checkpoint, not an ordered prerequisite: during clarification or design, wait until the first genuinely visual question before offering it. If no such question appears, never offer it. See the Visual Companion section below.
 
 ## Process Flow
 
 ```dot
 digraph brainstorming {
     "Explore project context" [shape=box];
-    "Visual questions ahead?" [shape=diamond];
-    "Offer Visual Companion\n(own message, no other content)" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
@@ -45,12 +44,9 @@ digraph brainstorming {
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
     "User reviews spec?" [shape=diamond];
-    "Invoke writing-plans skill" [shape=doublecircle];
+    "Invoke t-writing-plans skill" [shape=doublecircle];
 
-    "Explore project context" -> "Visual questions ahead?";
-    "Visual questions ahead?" -> "Offer Visual Companion\n(own message, no other content)" [label="yes"];
-    "Visual questions ahead?" -> "Ask clarifying questions" [label="no"];
-    "Offer Visual Companion\n(own message, no other content)" -> "Ask clarifying questions";
+    "Explore project context" -> "Ask clarifying questions";
     "Ask clarifying questions" -> "Propose 2-3 approaches";
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
@@ -59,11 +55,11 @@ digraph brainstorming {
     "Write design doc" -> "Spec self-review\n(fix inline)";
     "Spec self-review\n(fix inline)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
+    "User reviews spec?" -> "Invoke t-writing-plans skill" [label="approved"];
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**The terminal state is invoking `t-superpowers:t-writing-plans`.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is `t-superpowers:t-writing-plans`.
 
 ## The Process
 
@@ -148,8 +144,8 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 **Implementation:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan
-- Do NOT invoke any other skill. writing-plans is the next step.
+- Invoke `t-superpowers:t-writing-plans` to create a detailed implementation plan
+- Do NOT invoke any other skill. `t-superpowers:t-writing-plans` is the next step.
 
 ## Key Principles
 
@@ -164,10 +160,12 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 A browser-based companion for showing mockups, diagrams, and visual options during brainstorming. Available as a tool — not a mode. Accepting the companion means it's available for questions that benefit from visual treatment; it does NOT mean every question goes through the browser.
 
-**Offering the companion:** When you anticipate that upcoming questions will involve visual content (mockups, layouts, diagrams), offer it once for consent:
-> "Some of what we're working on might be easier to explain if I can show it to you in a web browser. I can put together mockups, diagrams, comparisons, and other visuals as we go. This feature is still new and can be token-intensive. Want to try it? (Requires opening a local URL)"
+**Offering the companion just-in-time:** Do not offer it upfront or merely because the topic is UI. Wait for the first genuinely visual question — one that would be clearer shown than told, such as a real layout, mockup, diagram, or spatial comparison — and offer it then as its own message:
+> "This next part might be easier if I show you — I can put together mockups, diagrams, and comparisons in a browser tab as we go. It's still new and can be token-intensive. Want me to? I'll open it for you."
 
-**This offer MUST be its own message.** Do not combine it with clarifying questions, context summaries, or any other content. The message should contain ONLY the offer above and nothing else. Wait for the user's response before continuing. If they decline, proceed with text-only brainstorming.
+**This offer MUST be its own message.** Include only the offer — no clarifying question, summary, or other content. Wait for the user's response. If they accept, read the detailed guide and start the server with a stable temporary project directory, for example `skills/t-brainstorming/scripts/start-server.sh --project-dir "$TMPDIR/t-superpowers-brainstorm/<stable-project-id>" --open`, so the browser opens on the first screen without writing runtime state to the repository root. If they decline or refuse, continue text-only and do not offer again in the same brainstorming session unless the user explicitly raises the companion.
+
+Conceptual and textual questions stay in the terminal. Do not offer the companion for requirements, terminology, scope, API choices, trade-off lists, or conceptual UI questions.
 
 **Per-question decision:** Even after the user accepts, decide FOR EACH QUESTION whether to use the browser or the terminal. The test: **would the user understand this better by seeing it than reading it?**
 

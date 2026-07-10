@@ -259,6 +259,25 @@ function runTests() {
     assert.throws(() => ws.decodeFrame(buf), /mask/i, 'Should reject unmasked client frame');
   });
 
+  test('rejects fragmented client frames outside the browser-helper subset', () => {
+    const frame = makeClientFrame(0x01, 'fragment', false);
+    assert.throws(
+      () => ws.decodeFrame(frame),
+      /FIN|fragment/i,
+      'browser-helper protocol only accepts complete single frames'
+    );
+  });
+
+  test('rejects client frames with any RSV bit set', () => {
+    const frame = makeClientFrame(0x01, 'reserved');
+    frame[0] |= 0x40;
+    assert.throws(
+      () => ws.decodeFrame(frame),
+      /RSV|reserved/i,
+      'browser-helper protocol does not negotiate extensions'
+    );
+  });
+
   test('handles multiple frames in a single buffer', () => {
     const frame1 = makeClientFrame(0x01, 'first');
     const frame2 = makeClientFrame(0x01, 'second');
@@ -327,6 +346,21 @@ function runTests() {
     const result = ws.decodeFrame(frame);
     assert(result);
     assert.strictEqual(result.payload.length, 65536);
+  });
+
+  test('rejects oversized 64-bit frames before payload allocation', () => {
+    const mask = Buffer.from([0x00, 0x00, 0x00, 0x00]);
+    const header = Buffer.alloc(14);
+    header[0] = 0x81; // FIN + TEXT
+    header[1] = 0x80 | 127; // masked, 64-bit length
+    header.writeBigUInt64BE(BigInt(ws.MAX_FRAME_PAYLOAD_BYTES) + 1n, 2);
+    mask.copy(header, 10);
+
+    assert.throws(
+      () => ws.decodeFrame(header),
+      /exceeds maximum allowed size/i,
+      'oversized advertised payload must be rejected from header alone'
+    );
   });
 
   // ========== Close Frame with Status Code ==========
