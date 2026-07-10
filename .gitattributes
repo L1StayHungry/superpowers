@@ -12,6 +12,10 @@ hooks/session-start text eol=lf
 *.mjs text eol=lf
 *.ts text eol=lf
 
+# Vendor snapshots are byte-for-byte upstream source; do not rewrite or reject
+# upstream whitespace while checking the fork-owned diff.
+vendor/superpowers/** -text -whitespace
+
 # Explicitly mark binary files
 *.png binary
 *.jpg binary

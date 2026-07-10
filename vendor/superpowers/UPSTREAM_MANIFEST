@@ -1,0 +1,393 @@
+{
+  "schema_version": 1,
+  "upstream_commit": "d884ae04edebef577e82ff7c4e143debd0bbec99",
+  "scope": [
+    "skills",
+    "hooks",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    ".cursor-plugin/plugin.json",
+    ".codex-plugin/plugin.json",
+    "package.json",
+    "gemini-extension.json",
+    ".opencode/plugins/superpowers.js"
+  ],
+  "entries": [
+    {
+      "path": ".claude-plugin/marketplace.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "acb6ae6641d0cc13e6d6ccc63ce199211010a74a"
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "2fe026fdc5eb03d1be9c00faec3cb12e2994a352"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "a6b31431fb1eb0b461f0e9c65ef917b2bf84ac61"
+    },
+    {
+      "path": ".cursor-plugin/plugin.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "18d788b2c0346a42226505741ed06cb084a2db26"
+    },
+    {
+      "path": ".opencode/plugins/superpowers.js",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "423e5ed513261485c657ba166b0372a5293639c7"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "120000",
+      "type": "symlink",
+      "git_blob": "681311eb9cf453d0faddf3aacaec7357e97ba8e9",
+      "target": "CLAUDE.md"
+    },
+    {
+      "path": "CLAUDE.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "f8e45e9db484bffb5ad5344ea2d27e68ce8286e5"
+    },
+    {
+      "path": "GEMINI.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "0dd2f585ecb2ee37c558c8233d72489bb2135856"
+    },
+    {
+      "path": "gemini-extension.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "dc5e1f645557628d5c35fef2242189a915f22b17"
+    },
+    {
+      "path": "hooks/hooks-cursor.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "84e6d33874ab5926035e35bc13dccf21244bb079"
+    },
+    {
+      "path": "hooks/hooks.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "79d8cee37d8209b0e5fd83fb7a6961afc151ec1e"
+    },
+    {
+      "path": "hooks/run-hook.cmd",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "ceec3a732d6251abb3c65ba860b7cc5d1f21dfb8"
+    },
+    {
+      "path": "hooks/session-start",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "93a6bc2c6b7269c704378cb6a61fce6aea7ff631"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "ad25028dab5fb09548a790a6cf32032a38f4f9b0"
+    },
+    {
+      "path": "skills/brainstorming/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "b0d52b258929b75d408fa4292b3f078a1104f078"
+    },
+    {
+      "path": "skills/brainstorming/scripts/frame-template.html",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "f540bb8a4f88107e2b37b2871a4c1a55a3b6f720"
+    },
+    {
+      "path": "skills/brainstorming/scripts/helper.js",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "e11d26489ce248f37af3e4dd01ddec6a4e88287f"
+    },
+    {
+      "path": "skills/brainstorming/scripts/server.cjs",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "a828b35af64d5c64ca68b9ec78473999ce698874"
+    },
+    {
+      "path": "skills/brainstorming/scripts/start-server.sh",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "016a8e4870142ce2adbe81a021d8b6b9073e7618"
+    },
+    {
+      "path": "skills/brainstorming/scripts/stop-server.sh",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "7cacfe9440043f7a46eac555cd835fad0769c425"
+    },
+    {
+      "path": "skills/brainstorming/spec-document-reviewer-prompt.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "60993129de3c445efeff53987b5297dc1acf3eb1"
+    },
+    {
+      "path": "skills/brainstorming/visual-companion.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "7b89f6b257259aae12407698fc11a932d414f970"
+    },
+    {
+      "path": "skills/dispatching-parallel-agents/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "75e7e22cef2e7adc0963e74457cf2664514dee33"
+    },
+    {
+      "path": "skills/executing-plans/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "075a1038f1b98181c54193df1b6bcf0ac8b302f0"
+    },
+    {
+      "path": "skills/finishing-a-development-branch/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "7f5337aaf9efff305db15836412106216dae4756"
+    },
+    {
+      "path": "skills/receiving-code-review/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "4c77a10ee338fb7bddec6f5acf3455c8f2e4465a"
+    },
+    {
+      "path": "skills/requesting-code-review/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "4b8aa605fc2ddf12e90840d2e06015d386c0d68d"
+    },
+    {
+      "path": "skills/requesting-code-review/code-reviewer.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "db84ae2a0f91834f93de9cf9f9cf8602bbd78a11"
+    },
+    {
+      "path": "skills/subagent-driven-development/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "d8ca081570c1ae7cc86e15f125c2b6063000f755"
+    },
+    {
+      "path": "skills/subagent-driven-development/implementer-prompt.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "218fcfeb57e62626a22851cef77807e65db874bf"
+    },
+    {
+      "path": "skills/subagent-driven-development/scripts/review-package",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "33bb20f73c085db100d4289afdd99c216b9fc42c"
+    },
+    {
+      "path": "skills/subagent-driven-development/scripts/sdd-workspace",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "ea9bb08f89e77bdcb47e7fa2c5ee6f0e97921f90"
+    },
+    {
+      "path": "skills/subagent-driven-development/scripts/task-brief",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "247a767017b12adeacf727c59775c050c40090f1"
+    },
+    {
+      "path": "skills/subagent-driven-development/task-reviewer-prompt.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "588a40227a79bf7ef97fb5b93f10f0f8f5f867b4"
+    },
+    {
+      "path": "skills/systematic-debugging/CREATION-LOG.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "9aa03092809feaf93c9bfa985252f6f1c9624692"
+    },
+    {
+      "path": "skills/systematic-debugging/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "b0eca38b3cf9523ea86c9211e96949c8e69d1d1c"
+    },
+    {
+      "path": "skills/systematic-debugging/condition-based-waiting-example.ts",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "703a06b653160d060bbf46ab5c6e0cd7446bd592"
+    },
+    {
+      "path": "skills/systematic-debugging/condition-based-waiting.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "70994f777c586f7d4c43033aac34c7cf0da6688b"
+    },
+    {
+      "path": "skills/systematic-debugging/defense-in-depth.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "e2483354dc2b62478a2624e34ca18bc0efe887b2"
+    },
+    {
+      "path": "skills/systematic-debugging/find-polluter.sh",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "1d71c56077dd819f0966cdae353fb142201611c6"
+    },
+    {
+      "path": "skills/systematic-debugging/root-cause-tracing.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "12ef5222e24e19ab92172b82b69ef1b0c30d9bfa"
+    },
+    {
+      "path": "skills/systematic-debugging/test-academic.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "23a6ed7a2044e0c44d74c3101406140f4851aa41"
+    },
+    {
+      "path": "skills/systematic-debugging/test-pressure-1.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "8d13b467e4a98abfffd12161cbc3c418021d6023"
+    },
+    {
+      "path": "skills/systematic-debugging/test-pressure-2.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "2d2315ec8a24ca872bc80d2f4056468ba051462a"
+    },
+    {
+      "path": "skills/systematic-debugging/test-pressure-3.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "89734b86fdc756488df315d53e5c3ac2d3752cd8"
+    },
+    {
+      "path": "skills/test-driven-development/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "60d2609ca56c7177a98f462fb71af77844ce92af"
+    },
+    {
+      "path": "skills/test-driven-development/testing-anti-patterns.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "e77ab6b6d65ecfb0d8212a32186bf68d18b5eade"
+    },
+    {
+      "path": "skills/using-git-worktrees/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "212c56926e1c9efab0ce0afd756ac2d1fb8f1b58"
+    },
+    {
+      "path": "skills/using-superpowers/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "8a08873ba07c1437f4f3cfd0d06c333eaf2e2715"
+    },
+    {
+      "path": "skills/using-superpowers/references/antigravity-tools.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "71155fde8162768ca610d7e64b8681a246e2bbe7"
+    },
+    {
+      "path": "skills/using-superpowers/references/codex-tools.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "1897cc3bb10e308aadad0f9a5c70355a86da82a2"
+    },
+    {
+      "path": "skills/using-superpowers/references/pi-tools.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "0c1f21713a45255ece4144fd2fee353e4ed4f90e"
+    },
+    {
+      "path": "skills/verification-before-completion/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "2f14076e59e6ce5cd6f88007421a85f0bd772520"
+    },
+    {
+      "path": "skills/writing-plans/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "b1613eb0578ae4483912bb1f227bd127fa79b577"
+    },
+    {
+      "path": "skills/writing-plans/plan-document-reviewer-prompt.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "1c12c1d6180395262d7150bdb12a9a90efc9cfa0"
+    },
+    {
+      "path": "skills/writing-skills/SKILL.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "6d3ded6e62ffdaaed7a84b52bc53f66e00e548be"
+    },
+    {
+      "path": "skills/writing-skills/anthropic-best-practices.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "15ea9eae223d9081b602618849791c07a7758f3d"
+    },
+    {
+      "path": "skills/writing-skills/examples/CLAUDE_MD_TESTING.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "47881fc85bd6c01b32b84d52ed9a0c73c8d6a089"
+    },
+    {
+      "path": "skills/writing-skills/graphviz-conventions.dot",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "3509e2f028cacaa8118cbc8c80025efb089ec28e"
+    },
+    {
+      "path": "skills/writing-skills/persuasion-principles.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "9756416a59600b70ecca4044e0919ee7d4a37b21"
+    },
+    {
+      "path": "skills/writing-skills/render-graphs.js",
+      "mode": "100755",
+      "type": "file",
+      "git_blob": "1d670fbb356553f898b9f8273f8b314f35ef1a59"
+    },
+    {
+      "path": "skills/writing-skills/testing-skills-with-subagents.md",
+      "mode": "100644",
+      "type": "file",
+      "git_blob": "a5acfeac86f34c7bc625d064e10c8a2f8180b696"
+    }
+  ]
+}
