@@ -227,6 +227,15 @@ The reviewer uses a read-only checkout and must not edit, commit, switch
 branches, move HEAD, or mutate the index. A missing verdict means the gate did
 not run and must be repeated.
 
+Do not pre-judge findings when constructing the dispatch. Never instruct a
+reviewer to ignore, downgrade, or not flag a specific issue. If you believe a
+likely finding is a false positive, let the reviewer raise it and adjudicate it
+in the review loop instead of pre-empting it. If the dispatch you are writing
+contains `do not flag`, `don't treat X as a defect`, `at most Minor`, or
+`the plan chose`, stop: you are pre-judging to spare yourself a review loop. A
+`plan-mandated` conflict is the human's decision (see step 3), not a reason to
+silence the reviewer.
+
 ### 3. Resolve findings
 
 - Resolve every `Cannot verify from diff` item using controller-owned plan and
@@ -267,6 +276,7 @@ Never:
 - write SDD artifacts outside the active `docsDev` change;
 - skip pre-flight, a task verdict, or final whole-branch review;
 - dispatch separate spec and quality reviewers for one task;
+- pre-judge findings in a reviewer dispatch (`do not flag`, `at most Minor`);
 - let a reviewer mutate the checkout;
 - use `HEAD~1` for a multi-commit task;
 - ignore plan-mandated findings or choose for the human;
