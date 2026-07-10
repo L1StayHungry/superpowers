@@ -45,6 +45,19 @@ test('build creates clean npm package layout and strips dev marketplace', () => 
     assert.equal(existsSync(path.join(DIST, '.claude-plugin/plugin.json')), true);
     assert.equal(existsSync(path.join(DIST, '.claude-plugin/marketplace.json')), false);
     assert.equal(existsSync(path.join(DIST, '.codex-plugin/plugin.json')), true);
+    const codexManifest = readJson(path.join(DIST, '.codex-plugin/plugin.json'));
+    assert.equal(codexManifest.name, 't-superpowers');
+    assert.equal(codexManifest.version, '5.1.1');
+    assert.equal(
+      codexManifest.description,
+      'Internal t-superpowers fork for complex development workflows: planning, TDD, debugging, review, and archive discipline while simple edits stay in normal agent mode.'
+    );
+    assert.deepEqual(codexManifest.interface.defaultPrompt, [
+      'Plan a complex change with t-superpowers.',
+      'Use t-superpowers for a multi-file behavior change.'
+    ]);
+    assert.deepEqual(codexManifest.hooks, {});
+    assert.equal(codexManifest.interface.category, 'Developer Tools');
     assert.equal(existsSync(path.join(DIST, 'skills/t-brainstorming/SKILL.md')), true);
     assert.equal(existsSync(path.join(DIST, 'hooks/hooks-cursor.json')), true);
     assert.equal(existsSync(path.join(DIST, 'README.md')), true);

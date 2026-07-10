@@ -20,6 +20,17 @@ Use `t-superpowers` for:
 
 For ambiguous work, ask for `t-superpowers` explicitly if you want the full workflow.
 
+## Selectively Adopted From Upstream v6.1.1
+
+This internal release selectively absorbs the useful engineering changes from upstream v6.1.1 while retaining the `t-*` namespace, complex-only trigger boundary, `docsDev/` artifacts, explicit archive gate, and internal npm distribution.
+
+- Runtime integration uses the current Codex `hooks: {}` schema and more robust session-start output handling.
+- The local visual companion adds session authentication, path isolation, safe lifecycle management, reconnect recovery, and idle shutdown without remote branding or telemetry.
+- `t-writing-plans` preserves exact project-wide values in `Global Constraints`, declares task interfaces, and sizes tasks around independently testable delivery boundaries.
+- `t-subagent-driven-development` uses one implementer and a single consolidated reviewer per task, followed by a final whole-branch review; file handoffs and a progress ledger keep controller context small and resumable.
+- Worktrees stay project-local, and finishing/review guidance no longer assumes one forge command.
+- `t-writing-skills` now uses Skill Discovery Optimization, matches guidance form to the observed failure, and requires controlled wording micro-tests for behavior-shaping edits.
+
 ## Do Not Enable Both For Normal Work
 
 Official `superpowers` and internal `t-superpowers` can coexist for namespace testing, but normal team usage should enable one family at a time. Enabling both can inject two bootstrap contexts and make trigger behavior noisy.
@@ -50,23 +61,29 @@ For local development and smoke testing, pass the plugin directory:
 claude -p "用 t-superpowers，规划一个复杂变更" --plugin-dir /Users/lihuajun/WorkProject/superpowers
 ```
 
-This is the verified local path used by the repository harnesses. If the team publishes an internal Claude marketplace, install `t-superpowers` from that marketplace and disable official `superpowers` for normal team work.
+This is the verified local path used by the repository harnesses. For normal usage, prefer the internal npm installer shown above; it creates the local Claude marketplace and installs the plugin through Claude Code's native command. Keep official `superpowers` disabled for normal team work.
 
 ### Cursor
 
-Use Cursor's plugin UI or command flow to add the local plugin from the repository root when local plugins are enabled:
+Use the internal installer so Cursor receives the required physical plugin directory:
 
-```text
-/add-plugin /Users/lihuajun/WorkProject/superpowers
+```bash
+npx @4399/tdata-t-superpowers@latest install cursor
+npx @4399/tdata-t-superpowers@latest doctor cursor
 ```
 
-After enabling it, verify the displayed plugin name is `T-Superpowers`. If your Cursor build only supports marketplace plugins, use the team's published internal `t-superpowers` package and keep official `superpowers` disabled.
+After enabling it, restart Cursor and verify the displayed plugin name is `T-Superpowers`. Keep official `superpowers` disabled for normal team work.
 
 ### Codex CLI / Codex App
 
-Codex local harness validation currently uses an isolated `CODEX_HOME` with the local plugin copied into the Codex plugin cache. The stable team path is to install the published internal `t-superpowers` plugin once it is available in the team's Codex plugin source.
+Install the `t-*` skill adapter into the active Codex home:
 
-Until that package exists, treat Codex local enablement as a harness task rather than a normal user install. The verified checks are recorded under `docsDev/archive/20260512-trigger-convergence/transcripts/`.
+```bash
+npx @4399/tdata-t-superpowers@latest install codex
+npx @4399/tdata-t-superpowers@latest doctor codex
+```
+
+`CODEX_HOME` is honored when set. Codex does not use the Claude/Cursor session-start hook, so `doctor codex` may report the documented adapter warning while the installed skills themselves are valid.
 
 ## Artifact Paths
 

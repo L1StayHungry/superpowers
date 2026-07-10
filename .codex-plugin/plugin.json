@@ -26,7 +26,7 @@
     "shortDescription": "Complex-change planning, TDD, debugging, review, and archive workflows",
     "longDescription": "T-Superpowers is an internal fork of Superpowers for complex development work. Use it when a change needs t-* planning, TDD, systematic debugging, subagent execution, review, or archive discipline. Simple copy/style/config edits, Q&A, and pure code reading should stay in the default agent flow.",
     "developerName": "Jesse Vincent",
-    "category": "Coding",
+    "category": "Developer Tools",
     "capabilities": [
       "Interactive",
       "Read",
@@ -44,5 +44,5 @@
     "logo": "./assets/app-icon.png",
     "screenshots": []
   },
-  "hooks": []
+  "hooks": {}
 }

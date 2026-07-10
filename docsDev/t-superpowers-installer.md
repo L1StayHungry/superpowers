@@ -393,9 +393,9 @@ npx @4399/tdata-t-superpowers@latest update codex --force
 | --- | --- | --- | --- |
 | `t-using-superpowers` | 说明触发边界，并引导访问其它 `t-*` skills。 | 会话启动、显式 `t-superpowers` 请求、判断是否需要复杂流程。 | 可以直接完成的简单编辑。 |
 | `t-brainstorming` | 澄清意图、比较方案，并把复杂需求整理成约定规格。 | 多文件功能、行为变化、需求不清的问题。 | 文案、样式、配置、问答、纯代码阅读。 |
-| `t-writing-plans` | 把已确认的规格转成可执行计划。 | 已有规格，需要拆分步骤、验证和交接。 | 可以直接实现的小改动。 |
+| `t-writing-plans` | 把已确认的规格转成带 Global Constraints、Interfaces 和可审查任务边界的执行计划。 | 已有规格，需要保留精确约束、接口、步骤和验证。 | 可以直接实现的小改动。 |
 | `t-executing-plans` | 按计划顺序执行，并在检查点验证。 | 已有可执行计划，需要逐项落地。 | 需求仍不清或需要重新设计的工作。 |
-| `t-subagent-driven-development` | 使用并行 agents 执行可安全拆分的计划。 | 多个相互独立的子任务。 | 强耦合或必须串行推进的任务。 |
+| `t-subagent-driven-development` | 每个任务由实现者执行，再由 one consolidated reviewer per task 同时检查规格与质量；最终执行全分支 review。 | 多任务计划、需要文件式交接、进度恢复和分层 review 的复杂实现。 | 没有书面计划或无需独立 review 的小改动。 |
 | `t-test-driven-development` | 针对行为变化或 bugfix 执行 red-green-refactor。 | 可以用失败测试证明修复的复杂变更。 | 纯文档、文案、样式或机械改动。 |
 | `t-systematic-debugging` | 复现症状、收集证据、定位根因后再修复。 | 复杂 bug、失败测试、异常行为、根因不明问题。 | 已明确的小改动或只读调查。 |
 | `t-verification-before-completion` | 在声称完成前要求新鲜验证证据。 | 最终确认修复、通过或可交付之前。 | 尚未实现的早期讨论。 |
@@ -404,5 +404,5 @@ npx @4399/tdata-t-superpowers@latest update codex --force
 | `t-dispatching-parallel-agents` | 把独立任务拆给多个并行 agents。 | 两个以上可独立研究或实现的任务。 | 共享状态多或依赖顺序明确的任务。 |
 | `t-using-git-worktrees` | 确保较大开发工作在隔离 workspace 中推进。 | 较大功能或计划执行，不应干扰当前工作区。 | 当前 workspace 已合适的小改动。 |
 | `t-finishing-a-development-branch` | 在实现和验证后指导最终集成选择。 | 工作已实现并验证，准备合并、PR 或清理。 | 尚未完成或验证失败的工作。 |
-| `t-writing-skills` | 按 skill 开发纪律创建、修改和验证 skills。 | 新增或修改 `t-*` skills。 | 与 skills 无关的普通代码修改。 |
+| `t-writing-skills` | 使用 Skill Discovery Optimization、failure-matched guidance 和受控 wording micro-test 创建、修改、验证 skills。 | 新增或修改 `t-*` skills；行为塑形措辞要求 5+ fresh-context repetitions per wording variant，并保留无指导对照、原始输出、来源与评分。 | 与 skills 无关的普通代码修改。 |
 | `t-archive` | 把已验收变更归档到长期 `docsDev/specs/` 记录。 | 用户显式要求归档某个 change-id。 | verification 后自动清理，或“看起来可以了”等模糊同意。 |

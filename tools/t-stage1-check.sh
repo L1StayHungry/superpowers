@@ -73,6 +73,12 @@ assert_eq(
     "T-Superpowers",
     ".codex-plugin/plugin.json interface.displayName",
 )
+assert_eq(
+    (codex.get("interface") or {}).get("category"),
+    "Developer Tools",
+    ".codex-plugin/plugin.json interface.category",
+)
+assert_eq(codex.get("hooks"), {}, ".codex-plugin/plugin.json hooks")
 
 marketplace = load(".claude-plugin/marketplace.json")
 assert_eq(marketplace.get("name"), "t-superpowers-dev", ".claude-plugin/marketplace.json name")
@@ -119,57 +125,254 @@ for skill in \
   fi
 done
 
-# The upstream vendor baseline must remain complete enough for future rebases.
-if [ ! -f vendor/superpowers/UPSTREAM_COMMIT ]; then
-  echo "FAIL: vendor/superpowers/UPSTREAM_COMMIT missing"
-  exit 1
-fi
-if ! rg -n '^commit:[[:space:]]+[0-9a-f]{7,40}[[:space:]]*$' vendor/superpowers/UPSTREAM_COMMIT >/dev/null; then
-  echo "FAIL: vendor/superpowers/UPSTREAM_COMMIT commit field invalid"
-  exit 1
-fi
-for path in \
-  vendor/superpowers/CLAUDE.md \
-  vendor/superpowers/AGENTS.md \
-  vendor/superpowers/GEMINI.md \
-  vendor/superpowers/package.json \
-  vendor/superpowers/gemini-extension.json \
-  vendor/superpowers/.opencode/plugins/superpowers.js \
-  vendor/superpowers/.claude-plugin/plugin.json \
-  vendor/superpowers/.claude-plugin/marketplace.json \
-  vendor/superpowers/.cursor-plugin/plugin.json \
-  vendor/superpowers/.codex-plugin/plugin.json \
-  vendor/superpowers/hooks/session-start \
-  vendor/superpowers/hooks/hooks.json \
-  vendor/superpowers/hooks/hooks-cursor.json \
-  vendor/superpowers/hooks/run-hook.cmd; do
-  if [ ! -f "${path}" ]; then
-    echo "FAIL: vendor baseline missing ${path}"
+# The always-loaded bootstrap must stay compact and preserve the fork boundary.
+bootstrap_skill="skills/t-using-superpowers/SKILL.md"
+for marker in \
+  '<SUBAGENT-STOP>' \
+  '<TRIGGER-BOUNDARY>' \
+  '<COMPLEX-WORK-GATE>' \
+  'complex multi-file.*first action.*t-brainstorming.*before.*reading' \
+  'User.*instructions.*precedence' \
+  '^## Skill Priority' \
+  'Planning skills turn.*executable steps' \
+  'Execution skills guide.*TDD' \
+  '^## Red Flags'; do
+  if ! rg -n "${marker}" "${bootstrap_skill}" >/dev/null; then
+    echo "FAIL: t-using-superpowers missing required marker: ${marker}"
     exit 1
   fi
 done
 
-for skill in \
-  brainstorming \
-  dispatching-parallel-agents \
-  executing-plans \
-  finishing-a-development-branch \
-  receiving-code-review \
-  requesting-code-review \
-  subagent-driven-development \
-  systematic-debugging \
-  test-driven-development \
-  using-git-worktrees \
-  using-superpowers \
-  verification-before-completion \
-  writing-plans \
-  writing-skills; do
-  path="vendor/superpowers/skills/${skill}/SKILL.md"
-  if [ ! -f "${path}" ]; then
-    echo "FAIL: vendor baseline missing ${path}"
+if rg -n '```dot|references/(copilot|gemini)-tools\.md|In Claude Code:|In Copilot CLI:|In Gemini CLI:' "${bootstrap_skill}" >/dev/null; then
+  echo "FAIL: t-using-superpowers retains removed platform or flowchart guidance"
+  exit 1
+fi
+
+bootstrap_words=$(wc -w < "${bootstrap_skill}")
+if [ "${bootstrap_words}" -gt 500 ]; then
+  echo "FAIL: t-using-superpowers is too large (${bootstrap_words} words; maximum 500)"
+  exit 1
+fi
+
+for removed_reference in \
+  skills/t-using-superpowers/references/copilot-tools.md \
+  skills/t-using-superpowers/references/gemini-tools.md; do
+  if [ -e "${removed_reference}" ]; then
+    echo "FAIL: obsolete platform reference remains: ${removed_reference}"
     exit 1
   fi
 done
+
+if rg -n '\bclose_agent\b' skills/t-using-superpowers/references/codex-tools.md >/dev/null; then
+  echo "FAIL: Codex mapping references unavailable close_agent"
+  exit 1
+fi
+
+# SessionStart no longer emits the legacy custom-skills warning and applies the
+# accepted EPIPE workaround to all three JSON output branches.
+if rg -n '~/.config/superpowers/skills|legacy_skills_dir|warning_message' hooks/session-start >/dev/null; then
+  echo "FAIL: hooks/session-start retains obsolete legacy skills warning"
+  exit 1
+fi
+
+printf_pipelines=$(rg -c 'printf .*"\$session_context" \| cat$' hooks/session-start || true)
+if [ "${printf_pipelines}" -ne 3 ]; then
+  echo "FAIL: hooks/session-start must pipe all three JSON printf outputs through cat"
+  exit 1
+fi
+
+# Exercise each SessionStart output branch and validate its public JSON shape.
+python3 - <<'PY'
+import json
+import os
+import subprocess
+import sys
+
+
+def fail(message):
+    print(f"FAIL hooks/session-start: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+cases = (
+    ("cursor", {"CURSOR_PLUGIN_ROOT": "/tmp/t-superpowers"}, "additional_context"),
+    ("claude", {"CLAUDE_PLUGIN_ROOT": "/tmp/t-superpowers"}, "hookSpecificOutput"),
+    ("sdk", {}, "additionalContext"),
+)
+
+for name, additions, expected_key in cases:
+    env = os.environ.copy()
+    for variable in ("CURSOR_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT", "COPILOT_CLI"):
+        env.pop(variable, None)
+    env.update(additions)
+
+    result = subprocess.run(
+        ["bash", "hooks/session-start"],
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        fail(f"{name} exited {result.returncode}: {result.stderr.strip()}")
+
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        fail(f"{name} emitted invalid JSON: {error}")
+
+    if set(payload) != {expected_key}:
+        fail(f"{name} expected only {expected_key!r}, got {sorted(payload)!r}")
+
+    if name == "claude":
+        nested = payload[expected_key]
+        if set(nested) != {"hookEventName", "additionalContext"}:
+            fail(f"claude nested keys invalid: {sorted(nested)!r}")
+        if nested["hookEventName"] != "SessionStart":
+            fail("claude hookEventName is not SessionStart")
+        context = nested["additionalContext"]
+    else:
+        context = payload[expected_key]
+
+    if "t-superpowers:t-using-superpowers" not in context:
+        fail(f"{name} context missing t-superpowers identity")
+    if "~/.config/superpowers/skills" in context or "legacy_skills_dir" in context:
+        fail(f"{name} context retains legacy warning")
+PY
+
+# Offline integrity gate for the exact upstream vendor pathspec.
+python3 - <<'PY'
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+EXPECTED_COMMIT = "d884ae04edebef577e82ff7c4e143debd0bbec99"
+EXPECTED_SCOPE = [
+    "skills",
+    "hooks",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    ".cursor-plugin/plugin.json",
+    ".codex-plugin/plugin.json",
+    "package.json",
+    "gemini-extension.json",
+    ".opencode/plugins/superpowers.js",
+]
+ROOT = Path("vendor/superpowers")
+MANIFEST = ROOT / "UPSTREAM_MANIFEST"
+METADATA_PATHS = {"UPSTREAM_COMMIT", "UPSTREAM_MANIFEST"}
+
+
+def fail(message):
+    print(f"FAIL vendor baseline: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def git_blob_id(data):
+    header = f"blob {len(data)}\0".encode()
+    return hashlib.sha1(header + data).hexdigest()
+
+
+if not MANIFEST.is_file():
+    fail("vendor/superpowers/UPSTREAM_MANIFEST missing")
+
+metadata = {}
+metadata_file = ROOT / "UPSTREAM_COMMIT"
+if not metadata_file.is_file():
+    fail("vendor/superpowers/UPSTREAM_COMMIT missing")
+for line in metadata_file.read_text(encoding="utf-8").splitlines():
+    if ":" in line:
+        key, value = line.split(":", 1)
+        metadata[key.strip()] = value.strip()
+if metadata.get("commit") != EXPECTED_COMMIT:
+    fail(f"UPSTREAM_COMMIT must be {EXPECTED_COMMIT}, got {metadata.get('commit')!r}")
+
+try:
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as error:
+    fail(f"cannot read UPSTREAM_MANIFEST: {error}")
+
+if manifest.get("schema_version") != 1:
+    fail("UPSTREAM_MANIFEST schema_version must be 1")
+if manifest.get("upstream_commit") != EXPECTED_COMMIT:
+    fail("UPSTREAM_MANIFEST upstream_commit mismatch")
+if manifest.get("scope") != EXPECTED_SCOPE:
+    fail("UPSTREAM_MANIFEST scope mismatch")
+
+attributes = subprocess.check_output(
+    [
+        "git",
+        "check-attr",
+        "text",
+        "whitespace",
+        "--",
+        "vendor/superpowers/CLAUDE.md",
+    ],
+    text=True,
+)
+if "text: unset" not in attributes or "whitespace: unset" not in attributes:
+    fail("vendor subtree must set both -text and -whitespace in .gitattributes")
+
+entries = manifest.get("entries")
+if not isinstance(entries, list):
+    fail("UPSTREAM_MANIFEST entries must be a list")
+if len(entries) != 62:
+    fail(f"UPSTREAM_MANIFEST must contain 62 entries, got {len(entries)}")
+
+expected = {}
+for entry in entries:
+    path = entry.get("path")
+    if not isinstance(path, str) or not path or path in METADATA_PATHS:
+        fail(f"invalid manifest path: {path!r}")
+    if path in expected:
+        fail(f"duplicate manifest path: {path}")
+    expected[path] = entry
+if list(expected) != sorted(expected):
+    fail("UPSTREAM_MANIFEST entries must be path-sorted")
+
+actual = {}
+for path in ROOT.rglob("*"):
+    if path.is_dir() and not path.is_symlink():
+        continue
+    relative = path.relative_to(ROOT).as_posix()
+    if relative in METADATA_PATHS:
+        continue
+    stat = path.lstat()
+    if path.is_symlink():
+        target = os.readlink(path)
+        data = os.fsencode(target)
+        actual[relative] = {
+            "path": relative,
+            "mode": "120000",
+            "type": "symlink",
+            "git_blob": git_blob_id(data),
+            "target": target,
+        }
+    elif path.is_file():
+        data = path.read_bytes()
+        actual[relative] = {
+            "path": relative,
+            "mode": "100755" if stat.st_mode & 0o111 else "100644",
+            "type": "file",
+            "git_blob": git_blob_id(data),
+        }
+    else:
+        fail(f"unsupported filesystem entry: {relative}")
+
+if set(actual) != set(expected):
+    missing = sorted(set(expected) - set(actual))
+    unexpected = sorted(set(actual) - set(expected))
+    fail(f"path set mismatch; missing={missing}, unexpected={unexpected}")
+for path in sorted(expected):
+    if actual[path] != expected[path]:
+        fail(f"content/mode/type mismatch: {path}")
+PY
 
 if ! diff -q vendor/superpowers/CLAUDE.md docs/upstream-contrib.md >/dev/null; then
   echo "FAIL: docs/upstream-contrib.md must equal vendor/superpowers/CLAUDE.md"
@@ -183,43 +386,6 @@ for dir in agents commands; do
     exit 1
   fi
 done
-
-# Codex must explicitly choose one Stage 1 hook mode.
-python3 - <<'PY'
-import json
-import os
-import sys
-
-with open(".codex-plugin/plugin.json", encoding="utf-8") as handle:
-    manifest = json.load(handle)
-
-if "hooks" not in manifest:
-    print("FAIL .codex-plugin/plugin.json hooks field must be explicitly set", file=sys.stderr)
-    sys.exit(1)
-
-hooks = manifest["hooks"]
-codex_hooks_path = "hooks/hooks-codex.json"
-if hooks == []:
-    pass
-elif hooks == "./hooks/hooks-codex.json":
-    if not os.path.isfile(codex_hooks_path):
-        print("FAIL: hooks/hooks-codex.json missing", file=sys.stderr)
-        sys.exit(1)
-else:
-    print(
-        "FAIL .codex-plugin/plugin.json hooks must be [] or './hooks/hooks-codex.json'; "
-        f"got {hooks!r}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-if os.path.isfile(codex_hooks_path):
-    with open(codex_hooks_path, encoding="utf-8") as handle:
-        body = handle.read()
-    if "CLAUDE_PLUGIN_ROOT" in body:
-        print("FAIL: hooks/hooks-codex.json must not contain CLAUDE_PLUGIN_ROOT", file=sys.stderr)
-        sys.exit(1)
-PY
 
 # Excluded JSON entry points remain outside Stage 1 migration.
 python3 - <<'PY'
