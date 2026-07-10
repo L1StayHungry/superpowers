@@ -151,9 +151,9 @@ Concrete results
 
 The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
 
-**Why this matters:** When a description summarizes the skill's workflow, an agent can treat it as a shortcut instead of reading the full skill content. For example, "one consolidated review per task" omits the required file handoffs, separate specification and quality verdicts, and final whole-branch review.
+**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, an agent may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused an agent to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
 
-Keep the description to "Use when executing implementation plans with independent tasks" (no workflow summary), so the body remains the only source of the combined task gate and final-review contract.
+When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), the agent correctly read the flowchart and followed the two-stage review process.
 
 **The trap:** Descriptions that summarize workflow create a shortcut agents will take. The skill body becomes documentation agents skip.
 

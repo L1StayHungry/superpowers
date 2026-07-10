@@ -5,16 +5,23 @@ description: Use when completing tasks, implementing major features, or before m
 
 # Requesting Code Review
 
-Dispatch a code reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
+Dispatch a reviewer subagent to catch issues before they cascade. The reviewer
+gets precisely crafted context for evaluation, never the controller session's
+history. Keep the reviewer on a read-only checkout: it may inspect the named
+range but may not edit files, change the index, move HEAD, switch branches, or
+commit.
 
 **Core principle:** Review early, review often.
 
 ## When to Request Review
 
 **Mandatory:**
-- After each task in subagent-driven development
 - After completing major feature
 - Before merge to main
+
+In `t-superpowers:t-subagent-driven-development`, the combined task reviewer
+already satisfies the per-task gate. Use this skill there for the final
+whole-branch review, not as a second reviewer after every task.
 
 **Optional but valuable:**
 - When stuck (fresh perspective)
@@ -25,19 +32,28 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 
 **1. Get git SHAs:**
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
+# Record BASE_SHA before implementation; do not infer it with HEAD~1 for a
+# multi-commit task because that silently drops earlier commits.
+BASE_SHA=<recorded-task-base-or-branch-merge-base>
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
+`HEAD~1` is acceptable only for a deliberately verified single-commit range.
+The default is always the recorded BASE.
+
 **2. Dispatch code reviewer subagent:**
 
-Use Task tool with `general-purpose` type, fill template at `code-reviewer.md`
+Use the current harness's general-purpose subagent capability and fill the
+template at [code-reviewer.md](code-reviewer.md). Do not depend on a
+harness-specific tool name.
 
 **Placeholders:**
 - `{DESCRIPTION}` - Brief summary of what you built
 - `{PLAN_OR_REQUIREMENTS}` - What it should do
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
+- `{REVIEW_PACKAGE}` - Optional package containing commit list, stat, and full
+  diff. SDD final review should provide it.
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
@@ -52,7 +68,7 @@ Use Task tool with `general-purpose` type, fill template at `code-reviewer.md`
 
 You: Let me request code review before proceeding.
 
-BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
+BASE_SHA=$(git log --format=%H --grep='Task 1' -1)
 HEAD_SHA=$(git rev-parse HEAD)
 
 [Dispatch code reviewer subagent]
@@ -75,9 +91,9 @@ You: [Fix progress indicators]
 ## Integration with Workflows
 
 **Subagent-Driven Development:**
-- Review after EACH task
-- Catch issues before they compound
-- Fix before moving to next task
+- The combined task reviewer handles each task's spec and quality gate
+- Use this skill once for the final whole-branch review
+- Provide the branch review package and accumulated Minor ledger findings
 
 **Executing Plans:**
 - Review after each task or at natural checkpoints

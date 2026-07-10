@@ -5,7 +5,7 @@ Use this template when dispatching a code reviewer subagent.
 **Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
 
 ```
-Task tool (general-purpose):
+Reviewer subagent (general-purpose):
   description: "Review code changes"
   prompt: |
     You are a Senior Code Reviewer with expertise in software architecture,
@@ -25,10 +25,24 @@ Task tool (general-purpose):
     **Base:** {BASE_SHA}
     **Head:** {HEAD_SHA}
 
-    ```bash
-    git diff --stat {BASE_SHA}..{HEAD_SHA}
-    git diff {BASE_SHA}..{HEAD_SHA}
-    ```
+    **Review package (optional):** {REVIEW_PACKAGE}
+
+    If a review package path is provided, read it once. It contains the commit
+    list, stat, and full diff for the range. Treat BASE and HEAD as identifiers
+    for validating that package; do not independently re-run `git diff` or
+    crawl the same changed files. If the package is absent or unreadable, use:
+
+    `git diff --stat {BASE_SHA}..{HEAD_SHA}` and
+    `git diff {BASE_SHA}..{HEAD_SHA}`.
+
+    ## Read-Only Review
+
+    Your review is read-only on this checkout. Do not mutate the working tree,
+    the index, HEAD, or branch state in any way. Use read-only inspection such
+    as `git show`, `git diff`, and `git log`. Never create/remove worktrees;
+    never move HEAD on this checkout. If required read-only context is missing,
+    report what the controller must provide instead of mutating repository
+    state to obtain it.
 
     ## What to Check
 
@@ -126,6 +140,8 @@ Task tool (general-purpose):
 - `{PLAN_OR_REQUIREMENTS}` — what it should do (plan file path, task text, or requirements)
 - `{BASE_SHA}` — starting commit
 - `{HEAD_SHA}` — ending commit
+- `{REVIEW_PACKAGE}` — optional file containing the complete range; preferred
+  for SDD final whole-branch review
 
 **Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
 

@@ -9,7 +9,7 @@ description: Use when creating new skills, editing existing skills, or verifying
 
 **Writing skills IS Test-Driven Development applied to process documentation.**
 
-**Personal skills live in your runtime's skills directory.**
+**Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex)** 
 
 You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
 
@@ -21,7 +21,7 @@ You write test cases (pressure scenarios with subagents), watch them fail (basel
 
 ## What is a Skill?
 
-A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future agents find and apply effective approaches.
+A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
 
 **Skills are:** Reusable techniques, patterns, tools, reference guides
 
@@ -55,7 +55,7 @@ The entire skill creation process follows RED-GREEN-REFACTOR.
 **Don't create for:**
 - One-off solutions
 - Standard practices well-documented elsewhere
-- Project-specific conventions (put in your instructions file)
+- Project-specific conventions (put in CLAUDE.md)
 - Mechanical constraints (if it's enforceable with regex/validation, automate it—save documentation for judgment calls)
 
 ## Skill Types
@@ -99,7 +99,7 @@ skills/
 - `description`: Third-person, describes ONLY when to use (NOT what it does)
   - Start with "Use when..." to focus on triggering conditions
   - Include specific symptoms, situations, and contexts
-  - **NEVER summarize the skill's process or workflow** (see SDO section for why)
+  - **NEVER summarize the skill's process or workflow** (see CSO section for why)
   - Keep under 500 characters if possible
 
 ```markdown
@@ -137,13 +137,13 @@ Concrete results
 ```
 
 
-## Skill Discovery Optimization (SDO)
+## Claude Search Optimization (CSO)
 
-**Critical for discovery:** Future agents need to FIND your skill.
+**Critical for discovery:** Future Claude needs to FIND your skill
 
 ### 1. Rich Description Field
 
-**Purpose:** An agent reads the description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
+**Purpose:** Claude reads description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
 
 **Format:** Start with "Use when..." to focus on triggering conditions
 
@@ -151,14 +151,14 @@ Concrete results
 
 The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
 
-**Why this matters:** When a description summarizes the skill's workflow, an agent can treat it as a shortcut instead of reading the full skill content. For example, "one consolidated review per task" omits the required file handoffs, separate specification and quality verdicts, and final whole-branch review.
+**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
 
-Keep the description to "Use when executing implementation plans with independent tasks" (no workflow summary), so the body remains the only source of the combined task gate and final-review contract.
+When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), Claude correctly read the flowchart and followed the two-stage review process.
 
-**The trap:** Descriptions that summarize workflow create a shortcut agents will take. The skill body becomes documentation agents skip.
+**The trap:** Descriptions that summarize workflow create a shortcut Claude will take. The skill body becomes documentation Claude skips.
 
 ```yaml
-# ❌ BAD: Summarizes workflow - agents may follow this instead of reading skill
+# ❌ BAD: Summarizes workflow - Claude may follow this instead of reading skill
 description: Use when executing plans - dispatches subagent per task with code review between tasks
 
 # ❌ BAD: Too much process detail
@@ -198,7 +198,7 @@ description: Use when using React Router and handling authentication redirects
 
 ### 2. Keyword Coverage
 
-Use words an agent would search for:
+Use words Claude would search for:
 - Error messages: "Hook timed out", "ENOTEMPTY", "race condition"
 - Symptoms: "flaky", "hanging", "zombie", "pollution"
 - Synonyms: "timeout/hang/freeze", "cleanup/teardown/afterEach"
@@ -275,7 +275,7 @@ wc -w skills/path/SKILL.md
 - `creating-skills`, `testing-skills`, `debugging-with-logs`
 - Active, describes the action you're taking
 
-### 5. Cross-Referencing Other Skills
+### 4. Cross-Referencing Other Skills
 
 **When writing documentation that references other skills:**
 
@@ -313,7 +313,7 @@ digraph when_flowchart {
 - Linear instructions → Numbered lists
 - Labels without semantic meaning (step1, helper2)
 
-See [graphviz-conventions.dot](graphviz-conventions.dot) for graphviz style rules.
+See @graphviz-conventions.dot for graphviz style rules.
 
 **Visualizing for your human partner:** Use `render-graphs.js` in this directory to render a skill's flowcharts to SVG:
 ```bash
@@ -456,44 +456,9 @@ Different skill types need different test approaches:
 
 **All of these mean: Test before deploying. No exceptions.**
 
-## Match the Form to the Failure
-
-Classify the observed baseline failure before writing guidance. A form that corrects one failure can make another worse.
-
-| Baseline failure | Right form | Wrong form |
-|---|---|---|
-| **Knowledge gap** — the agent does not understand why or how | Concise explanation, one worked example, then a quick reference | Prohibition without teaching the missing model |
-| **Discipline gap** — the agent knows the rule but skips it under pressure | Explicit prohibition, rationalization table, and red flags | Soft guidance such as "prefer" or "consider" |
-| Output has the wrong shape | Positive recipe or contract stating the required parts in order | A list of things not to say |
-| A required element is omitted | REQUIRED field, slot, or checklist item in the structure already produced | A prose reminder away from the output structure |
-| **Mechanical or machine-checkable error** | An executable validator, linter, or test with a focused failure message | Prompt prose that asks the agent to self-certify |
-| Behavior depends on a condition | A conditional keyed to an observable predicate | An unconditional rule followed by exemptions |
-
-For output-shaping failures, the shipped guidance itself is a positive contract: `The output consists of ...`, followed by the required parts in order. A candidate fails review if its shipped wording adds negative content rules (`do not`, `don't`, `never`, `must not`), exemption clauses, or a trailing prohibition after the recipe. Rewrite it until the entire shipped block is only the positive contract. Under competing incentives, agents negotiate with wording such as "don't restate the spec"; a positive recipe leaves a directly testable shape. For discipline failures, strong prohibitions remain appropriate because the problem is knowing the rule and choosing to violate it.
-
-For example, when a dispatch prompt bloats by restating an on-disk brief, the guidance shape is:
-
-```markdown
-The dispatch prompt consists of:
-1. role or action;
-2. task-brief path to read;
-3. report path to write;
-4. invocation and verification commands.
-```
-
-That block is complete. Do not append a sentence forbidding restatement; matching the four-part contract is the observable success condition.
-
-Rules for every form:
-
-- Do not append nuance clauses such as "unless it matters." Express a real exception as its own observable conditional.
-- Do not rely on exemption clauses to scope a broad prohibition. Restructure the rule so it cannot reach the exempt content.
-- Prefer an executable check for deterministic constraints; reserve skill prose for judgment that cannot be validated mechanically.
-
 ## Bulletproofing Skills Against Rationalization
 
 Skills that enforce discipline (like TDD) need to resist rationalization. Agents are smart and will find loopholes when under pressure.
-
-**Scope:** This toolkit is for discipline gaps. For knowledge, output-shape, omission, conditional, or mechanical failures, use the matching form above instead of copying the discipline pattern.
 
 **Psychology note:** Understanding WHY persuasion techniques work helps you apply them systematically. See persuasion-principles.md for research foundation (Cialdini, 2021; Meincke et al., 2025) on authority, commitment, scarcity, social proof, and unity principles.
 
@@ -557,7 +522,7 @@ Make it easy for agents to self-check when rationalizing:
 **All of these mean: Delete code. Start over with TDD.**
 ```
 
-### Update SDO for Violation Symptoms
+### Update CSO for Violation Symptoms
 
 Add to description: symptoms of when you're ABOUT to violate the rule:
 
@@ -588,21 +553,7 @@ Run same scenarios WITH skill. Agent should now comply.
 
 Agent found new rationalization? Add explicit counter. Re-test until bulletproof.
 
-### Micro-Test Wording Before Full Scenarios
-
-Full pressure scenarios remain the final gate, but they are slow. Micro-test the wording first:
-
-1. Use one fresh-context sample per call. Put the guidance in the realistic full skill or prompt template where it will live, not in isolation.
-2. Always include a **no-guidance control**. If the control does not exhibit the target failure, stop: there is no demonstrated failure to correct.
-3. Run **5+ reps per variant** with the **same pressure scenario**, model/runtime, sampling settings, and scoring rubric. A single sample is not evidence.
-4. **Define the rubric before sampling.** Score the target behavior and variance, not whether the prose merely sounds persuasive.
-5. Record provenance for every call: assigned guidance variant, complete system and user prompts, model/runtime, sampling settings, timestamp, and run identifier.
-6. Before scoring, **preserve every raw response verbatim** under `docsDev/skill-tests/<campaign>/`; do not repair, summarize, or replace an inconvenient run.
-7. Manually read every flagged match. Template echoes and quoted counter-examples can look like compliance to an automated count.
-
-Micro-tests compare wording; they do not replace realistic pressure scenarios for discipline skills. Keep reusable campaign evidence in `docsDev/skill-tests/`, not in an active change directory that explicit archival may move.
-
-**Testing methodology:** See [testing-skills-with-subagents.md](testing-skills-with-subagents.md) for the complete testing methodology:
+**Testing methodology:** See @testing-skills-with-subagents.md for the complete testing methodology:
 - How to write pressure scenarios
 - Pressure types (time, sunk cost, authority, exhaustion)
 - Plugging holes systematically
@@ -644,7 +595,7 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 
 ## Skill Creation Checklist (TDD Adapted)
 
-**IMPORTANT: Create a todo for EACH checklist item below.**
+**IMPORTANT: Use TodoWrite to create todos for EACH checklist item below.**
 
 **RED Phase - Write Failing Test:**
 - [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
@@ -659,9 +610,6 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 - [ ] Keywords throughout for search (errors, symptoms, tools)
 - [ ] Clear overview with core principle
 - [ ] Address specific baseline failures identified in RED
-- [ ] Guidance form matches the observed failure type
-- [ ] Behavior-shaping wording has a no-guidance control, a predeclared rubric, and 5+ fresh-context reps per variant
-- [ ] Every raw response and its provenance is preserved under `docsDev/skill-tests/`
 - [ ] Code inline OR link to separate file
 - [ ] One excellent example (not multi-language)
 - [ ] Run scenarios WITH skill - verify agents now comply
@@ -686,10 +634,9 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 
 ## Discovery Workflow
 
-How future agents find your skill:
+How future Claude finds your skill:
 
 1. **Encounters problem** ("tests are flaky")
-2. **Searches skills** (descriptions and names match the symptoms)
 3. **Finds SKILL** (description matches)
 4. **Scans overview** (is this relevant?)
 5. **Reads patterns** (quick reference table)
