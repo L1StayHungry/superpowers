@@ -45,9 +45,10 @@ test('build creates clean npm package layout and strips dev marketplace', () => 
     assert.equal(existsSync(path.join(DIST, '.claude-plugin/plugin.json')), true);
     assert.equal(existsSync(path.join(DIST, '.claude-plugin/marketplace.json')), false);
     assert.equal(existsSync(path.join(DIST, '.codex-plugin/plugin.json')), true);
+    const rootPkg = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
     const codexManifest = readJson(path.join(DIST, '.codex-plugin/plugin.json'));
     assert.equal(codexManifest.name, 't-superpowers');
-    assert.equal(codexManifest.version, '5.1.1');
+    assert.equal(codexManifest.version, rootPkg.version);
     assert.equal(
       codexManifest.description,
       'Internal t-superpowers fork for complex development workflows: planning, TDD, debugging, review, and archive discipline while simple edits stay in normal agent mode.'
@@ -66,7 +67,6 @@ test('build creates clean npm package layout and strips dev marketplace', () => 
 
     const rootPackageAfter = readFileSync(path.join(ROOT, 'package.json'), 'utf8');
     assert.equal(rootPackageAfter, rootPackageBefore);
-    const rootPkg = JSON.parse(rootPackageAfter);
     assert.equal(rootPkg.name, 'superpowers');
     assert.equal(rootPkg.main, '.opencode/plugins/superpowers.js');
   });

@@ -1,7 +1,7 @@
 {
   "name": "t-superpowers",
   "description": "Internal t-superpowers fork for Claude Code complex development workflows: planning, TDD, debugging, review, and archive discipline while simple edits stay direct.",
-  "version": "5.1.1",
+  "version": "6.0.0",
   "author": {
     "name": "Jesse Vincent",
     "email": "jesse@fsck.com"
